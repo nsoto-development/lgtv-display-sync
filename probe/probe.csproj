@@ -10,4 +10,9 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
+  <!-- Same git-ignored lab config the app uses (Ip/Port/KeyFile). -->
+  <ItemGroup>
+    <None Include="..\app\config.json" Link="config.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\app\config.json')" />
+  </ItemGroup>
+
 </Project>

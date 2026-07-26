@@ -73,19 +73,28 @@ internal static class Program
 
     private static async Task<int> Main(string[] args)
     {
-        // Placeholders — pass --ip / --bind for your lab (do not commit real TV addresses).
-        var ip = "192.168.1.100";
-        var port = 3001;
+        if (args.Any(a => a is "-h" or "--help"))
+        {
+            Console.WriteLine("usage: lgprobe [--config path] [--ip A.B.C.D] [--port 3001] [--bind A.B.C.D | --no-bind] [--timeout ms] [--screen off|on] [--connect-only] [--keyfile path]");
+            Console.WriteLine("  Ip/Port/KeyFile come from the same config.json as the app (copied from app/config.json on build). CLI overrides win.");
+            return 0;
+        }
+
+        // Load shared config first, then let CLI flags override.
+        var cfg = ProbeConfig.Load(FindConfigArg(args));
+        var ip = cfg.Ip;
+        var port = cfg.Port;
         string? bindIp = null; // optional: --bind <local-nic-ip> to force the TV-facing NIC
         var phaseTimeoutMs = 15000;
         string? screenOnce = null; // "off"/"on": send one screen command then exit (non-interactive)
         var connectOnly = false;   // connect+register, report, exit (no interactive loop)
-        string? keyFile = null;    // explicit path to the client-key file (overrides default location)
+        string? keyFile = cfg.KeyFile;
 
         for (var i = 0; i < args.Length; i++)
         {
             switch (args[i])
             {
+                case "--config": i++; break; // already applied
                 case "--ip": ip = args[++i]; break;
                 case "--port": port = int.Parse(args[++i]); break;
                 case "--bind": bindIp = args[++i]; break;
@@ -94,13 +103,10 @@ internal static class Program
                 case "--screen": screenOnce = args[++i]; break; // off | on
                 case "--connect-only": connectOnly = true; break;
                 case "--keyfile": keyFile = args[++i]; break;
-                case "-h" or "--help":
-                    Console.WriteLine("usage: lgprobe [--ip A.B.C.D] [--port 3001] [--bind A.B.C.D | --no-bind] [--timeout ms] [--screen off|on]");
-                    return 0;
             }
         }
 
-        Log($"LG webOS SSAP probe -> {ip}:{port}  bind={bindIp ?? "(OS default)"}  phaseTimeout={phaseTimeoutMs}ms");
+        Log($"LG webOS SSAP probe -> {ip}:{port}  bind={bindIp ?? "(OS default)"}  phaseTimeout={phaseTimeoutMs}ms  config={cfg.Source}");
         var clientKey = LoadClientKey(ip, keyFile);
         Log(clientKey is null
             ? "client-key: NONE found -> will attempt pairing (accept the PROMPT on the TV)"
@@ -318,4 +324,55 @@ internal static class Program
 
     private static string Trunc(string s, int max) =>
         s.Length <= max ? s : s[..max] + $"...(+{s.Length - max})";
+
+    private static string? FindConfigArg(string[] args)
+    {
+        for (var i = 0; i < args.Length - 1; i++)
+            if (args[i] == "--config") return args[i + 1];
+        return null;
+    }
+}
+
+/// <summary>Subset of app/config.json fields the probe needs (Ip/Port/KeyFile).</summary>
+internal sealed record ProbeConfig
+{
+    public string Ip { get; init; } = "192.168.1.100";
+    public int Port { get; init; } = 3001;
+    public string? KeyFile { get; init; }
+    public string Source { get; init; } = "(defaults)";
+
+    public static ProbeConfig Load(string? explicitPath = null)
+    {
+        foreach (var path in CandidatePaths(explicitPath))
+        {
+            try
+            {
+                if (!File.Exists(path)) continue;
+                var loaded = JsonSerializer.Deserialize<ProbeConfig>(File.ReadAllText(path),
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (loaded is null) continue;
+                return loaded with { Source = path };
+            }
+            catch { /* try next */ }
+        }
+        return new ProbeConfig();
+    }
+
+    private static IEnumerable<string> CandidatePaths(string? explicitPath)
+    {
+        if (!string.IsNullOrWhiteSpace(explicitPath))
+            yield return Path.GetFullPath(explicitPath);
+
+        // Copied beside the exe via probe.csproj (from ../app/config.json).
+        yield return Path.Combine(AppContext.BaseDirectory, "config.json");
+
+        // Running from source tree without a copy: walk up looking for app/config.json.
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+        {
+            var sibling = Path.Combine(dir.FullName, "app", "config.json");
+            yield return sibling;
+            if (dir.Name.Equals("probe", StringComparison.OrdinalIgnoreCase))
+                yield return Path.Combine(dir.Parent!.FullName, "app", "config.json");
+        }
+    }
 }
