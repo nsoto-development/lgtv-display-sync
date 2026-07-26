@@ -9,6 +9,7 @@
     <AssemblyName>lgtv-display-sync</AssemblyName>
     <RootNamespace>LgtvDisplaySync.App</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <ApplicationIcon>appicon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
