@@ -34,10 +34,19 @@ Tracks **[feature] work item #1 (P0)** on [`docs/roadmap.md`](../roadmap.md).
 | Area | Location |
 |------|----------|
 | Entry / watcher loop | `app/Program.cs` |
+| Windows service worker | `app/WatcherHostedService.cs` |
+| Data paths (ProgramData + local override) | `app/AppPaths.cs`, `app/KeyStore.cs` |
 | Display events | `app/MonitorPowerWatcher.cs` |
 | SSAP / WoL / keys | `app/Ssap.cs`, `app/Wol.cs`, `app/KeyStore.cs` |
 | Icon | `app/appicon.ico` |
-| Project (Win32 message loop; no WinForms) | `app/app.csproj` |
+| Project (Win32 message loop; Hosting Windows Services) | `app/app.csproj` |
+
+## Data directory
+
+- **Default (interactive + service):** `%ProgramData%\nsoto.dev\lg-tv-display-sync` (keys + `log.txt`).
+- **Load override:** `--keyfile` / config `KeyFile`, else existing `%LocalAppData%\lgtv-display-sync\{ip}_ClientKey.txt`, else ProgramData; ColorControl migrate still applies when none found.
+- **Save:** explicit path if set, otherwise ProgramData (shared store going forward).
+- **Service account:** assume LocalSystem for session-0 (M3 sets this at install). Ensure ProgramData ACLs allow SYSTEM to read keys written interactively (M3 may harden).
 
 ## Milestones
 
@@ -46,7 +55,7 @@ Execution order is the table order (drop WinForms before service/tray work).
 | # | Milestone | Status | Deliverables |
 |---|-----------|--------|--------------|
 | M1 | Drop WinForms | Done | Replace `NativeWindow` / `Application.Run` with Win32 HWND message loop; remove `UseWindowsForms`; record WinUI unpackaged as later UI direction |
-| M2 | Dual-mode Windows service host | Planned | Non-interactive → true service; direct launch → console app as today; session-0 display events still drive SSAP/WoL |
+| M2 | Dual-mode Windows service host | Done | Non-interactive → true service (`UseWindowsService` + hosted Win32 pump); direct launch → console; ProgramData data dir with local key override |
 | M3 | Official service install / autostart | Planned | Documented install/uninstall (script or CLI); service starts on boot; README updated |
 | M4 | System tray when interactive | Planned | Tray icon while running interactively; enough UX to confirm “it’s running”; WinUI (unpackaged) for any new UI — not WinForms |
 
@@ -60,6 +69,5 @@ Execution order is the table order (drop WinForms before service/tray work).
 
 ## Open questions
 
-- Prefer `Microsoft.Extensions.Hosting` worker + `UseWindowsService` vs lighter custom service base — pick whatever fits the post-M1 Win32 message loop for `MonitorPowerWatcher`.
-- Service account / key path: `%LocalAppData%` under SYSTEM vs a configured `KeyFile` / ProgramData location — decide in M2/M3 so pairing under the service account is explicit.
 - M4 tray: WinUI `AppWindow` + tray helper vs thin Win32 `NotifyIcon` first and WinUI window later — default toward WinUI if we’re already taking the App SDK dependency for modern UI.
+- M3: ProgramData ACL / copy-key step so LocalSystem can always read a key paired under an interactive user account.

@@ -1,18 +1,16 @@
 namespace LgtvDisplaySync.App;
 
-// Persists the LG webOS client-key in the tool's OWN folder
-// (%LocalAppData%\lgtv-display-sync\{ip}_ClientKey.txt). Resolution order on load:
+// Persists the LG webOS client-key. Resolution order on load:
 //   1. an explicit --keyfile / config path, if given
-//   2. our own saved key
-//   3. one-time migration: reuse a key already paired by ColorControl, and copy it to ours
+//   2. legacy local file (%LocalAppData%\lgtv-display-sync\{ip}_ClientKey.txt) if present
+//   3. shared store (%ProgramData%\nsoto.dev\lg-tv-display-sync\{ip}_ClientKey.txt)
+//   4. one-time migration: reuse a key already paired by ColorControl, and copy it to ProgramData
 // If none exist, Load() returns null and the client performs first-run pairing (TV prompt),
-// then calls Save() with the key the TV returns.
+// then calls Save() with the key the TV returns (explicit path if set, else ProgramData).
 public sealed class KeyStore(string ip, string? explicitFile)
 {
-    private static string Dir => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "lgtv-display-sync");
-
-    private string OwnPath => Path.Combine(Dir, $"{ip}_ClientKey.txt");
+    private string ProgramDataPath => Path.Combine(AppPaths.DataDir, $"{ip}_ClientKey.txt");
+    private string LegacyPath => Path.Combine(AppPaths.LegacyDataDir, $"{ip}_ClientKey.txt");
 
     private static string ColorControlPath(string ip) => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -23,7 +21,12 @@ public sealed class KeyStore(string ip, string? explicitFile)
         if (explicitFile is not null)
             return Read(explicitFile);
 
-        var own = Read(OwnPath);
+        // Prefer an existing local file so interactive upgrades keep working without a copy step.
+        var legacy = Read(LegacyPath);
+        if (legacy is not null)
+            return legacy;
+
+        var own = Read(ProgramDataPath);
         if (own is not null)
             return own;
 
@@ -31,7 +34,7 @@ public sealed class KeyStore(string ip, string? explicitFile)
         var cc = Read(ColorControlPath(ip));
         if (cc is not null)
         {
-            Save(cc); // migrate a copy into our own store
+            Save(cc); // migrate a copy into ProgramData
             return cc;
         }
         return null;
@@ -41,8 +44,9 @@ public sealed class KeyStore(string ip, string? explicitFile)
     {
         try
         {
-            Directory.CreateDirectory(Dir);
-            File.WriteAllText(OwnPath, key.Trim());
+            var path = explicitFile ?? ProgramDataPath;
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, key.Trim());
         }
         catch { /* non-fatal: we can still run this session with the in-memory key */ }
     }

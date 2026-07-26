@@ -1,5 +1,8 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Hosting.WindowsServices;
 
 namespace LgtvDisplaySync.App;
 
@@ -21,17 +24,16 @@ internal static class Program
         for (var i = 0; i < args.Length; i++)
             if (args[i] == "--keyfile" && i + 1 < args.Length) keyOverride = args[i + 1];
 
-        Log($"lgtv-display-sync starting — TV {_cfg.Ip}:{_cfg.Port} mac={_cfg.Mac} off={_cfg.OffAction} session={GetSessionInfo()}{(_watchOnly ? " mode=watch-only" : "")}");
+        var asService = WindowsServiceHelpers.IsWindowsService();
+        Log($"lgtv-display-sync starting — TV {_cfg.Ip}:{_cfg.Port} mac={_cfg.Mac} off={_cfg.OffAction} session={GetSessionInfo()} host={(asService ? "service" : "console")}{(_watchOnly ? " mode=watch-only" : "")}");
 
         if (_watchOnly)
-        {
-            // Log display OFF/ON only — no SSAP / WoL (used for session-0 experiments).
-            return RunWatcherLoop();
-        }
+            return RunHostedOrConsole(asService);
 
         _tv = new SsapClient(_cfg.Ip, _cfg.Port, new KeyStore(_cfg.Ip, keyOverride ?? _cfg.KeyFile));
 
         // First-run pairing: connect once (long wait for the on-screen prompt) and save the key.
+        // CLI one-shots always bypass the service host.
         if (Array.Exists(args, a => a == "--pair"))
         {
             using var pcts = new CancellationTokenSource(90_000);
@@ -63,33 +65,67 @@ internal static class Program
             }
         }
 
-        return RunWatcherLoop();
+        return RunHostedOrConsole(asService);
     }
 
-    private static int RunWatcherLoop()
+    private static int RunHostedOrConsole(bool asService) =>
+        asService ? RunAsWindowsService() : RunAsConsole();
+
+    private static int RunAsConsole()
+    {
+        RunWatcherUntilQuit(consoleCancel: true, CancellationToken.None);
+        return 0;
+    }
+
+    private static int RunAsWindowsService()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddWindowsService(o => o.ServiceName = "lgtv-display-sync");
+        builder.Services.AddHostedService<WatcherHostedService>();
+        builder.Build().Run();
+        return 0;
+    }
+
+    /// <summary>
+    /// Shared watcher + Win32 message pump. Used by console and the Windows service worker thread.
+    /// </summary>
+    internal static void RunWatcherUntilQuit(bool consoleCancel, CancellationToken stoppingToken)
     {
         MonitorPowerWatcher? watcher = null;
+        CancellationTokenRegistration stopReg = default;
         try
         {
             watcher = new MonitorPowerWatcher();
             watcher.DisplayStateChanged += OnDisplayStateChanged;
             Log(_watchOnly
-                ? "watch-only: registered for monitor power events (no SSAP/WoL). (Ctrl+C to quit)"
-                : "registered for monitor power events; waiting. (Ctrl+C to quit)");
+                ? "watch-only: registered for monitor power events (no SSAP/WoL)."
+                    + (consoleCancel ? " (Ctrl+C to quit)" : "")
+                : "registered for monitor power events; waiting."
+                    + (consoleCancel ? " (Ctrl+C to quit)" : ""));
         }
         catch (Exception ex)
         {
-            Log($"FAILED to register monitor watcher (expected if running as a session-0 service): {ex.GetType().Name}: {ex.Message}");
+            Log($"FAILED to register monitor watcher: {ex.GetType().Name}: {ex.Message}");
         }
 
-        Console.CancelKeyPress += (_, e) => { e.Cancel = true; PostQuitMessage(0); };
-        RunMessageLoop(); // message pump for the watcher
+        if (consoleCancel)
+            Console.CancelKeyPress += (_, e) => { e.Cancel = true; PostQuitMessage(0); };
 
-        _current?.Cancel();
-        watcher?.Dispose();
-        _tv?.Dispose();
-        Log("stopped.");
-        return 0;
+        if (stoppingToken.CanBeCanceled)
+            stopReg = stoppingToken.Register(() => PostQuitMessage(0));
+
+        try
+        {
+            RunMessageLoop();
+        }
+        finally
+        {
+            stopReg.Dispose();
+            _current?.Cancel();
+            watcher?.Dispose();
+            _tv?.Dispose();
+            Log("stopped.");
+        }
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -114,7 +150,7 @@ internal static class Program
     private static extern IntPtr DispatchMessage(ref MSG lpMsg);
 
     [DllImport("user32.dll")]
-    private static extern void PostQuitMessage(int nExitCode);
+    internal static extern void PostQuitMessage(int nExitCode);
 
     private static void RunMessageLoop()
     {
@@ -231,19 +267,22 @@ internal static class Program
 
     private static string InitLogPath()
     {
-        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "lgtv-display-sync");
-        Directory.CreateDirectory(dir);
-        return Path.Combine(dir, "log.txt");
+        try { AppPaths.EnsureDataDir(); } catch { /* best-effort */ }
+        return AppPaths.LogFile;
     }
 
     private static void Log(string msg)
     {
         var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}  {msg}";
-        Console.WriteLine(line);
-        try { Console.Out.Flush(); } catch { }
+        try { Console.WriteLine(line); Console.Out.Flush(); } catch { }
         lock (_logLock)
         {
-            try { File.AppendAllText(_logPath, line + Environment.NewLine); } catch { }
+            try
+            {
+                AppPaths.EnsureDataDir();
+                File.AppendAllText(_logPath, line + Environment.NewLine);
+            }
+            catch { /* non-fatal */ }
         }
     }
 }
@@ -255,7 +294,7 @@ internal sealed record Config
     public string Ip { get; init; } = "192.168.1.100";
     public int Port { get; init; } = 3001;
     public string Mac { get; init; } = "AA:BB:CC:DD:EE:FF";
-    public string? KeyFile { get; init; } // null -> reuse ColorControl's %AppData%\Maassoft\ColorControl\{ip}_ClientKey.txt
+    public string? KeyFile { get; init; } // null -> ProgramData (or local override / ColorControl migrate)
     public string OffAction { get; init; } = "power"; // "power" (standby) or "screen" (panel off)
 
     public static Config Load()
