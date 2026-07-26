@@ -13,6 +13,8 @@
 
   <ItemGroup>
     <None Update="config.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('config.json')" />
+    <None Update="install-service.ps1" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="uninstall-service.ps1" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

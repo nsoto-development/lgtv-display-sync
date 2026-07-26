@@ -6,7 +6,8 @@ TV's power/screen state to the Windows display state, and wakes the TV over the 
 - Windows turns the display **off** (idle / lock / DPMS) → put the **TV to standby** (or just screen‑off).
 - Windows turns the display **on** (mouse / key) → **Wake‑on‑LAN** the TV and turn its screen on.
 
-It runs as an ordinary **user‑session app** (no Windows service, no elevation).
+It can run as a **Windows service** (session 0 / LocalSystem, auto‑start on boot) or as a
+**console app** when you launch the exe directly.
 
 ---
 
@@ -91,29 +92,66 @@ app/bin/Debug/net9.0-windows/lgtv-display-sync.exe --watch-only
 ```
 
 **Config:** copy `app/config.json.example` → `app/config.json` and set your TV's `Ip`, `Mac`, and
-`OffAction` (`"power"` for standby, `"screen"` for panel‑off). `config.json` is git‑ignored.
+`OffAction` (`"power"` for standby, `"screen"` for panel‑off). `config.json` is git‑ignored and is
+loaded from the folder next to the exe (so a service `binPath` must point at a build that includes
+your real `config.json`).
 
-**Pairing:** on first run with no key, the tool shows a prompt on the TV, waits, and saves the
-returned client‑key to `%LocalAppData%\lgtv-display-sync\`. If ColorControl already paired this TV,
-its key is reused automatically once.
+**Pairing / keys:** on first run with no key, the tool shows a prompt on the TV, waits, and saves
+the client‑key under `%ProgramData%\nsoto.dev\lg-tv-display-sync\` (shared by console and service).
+If a legacy key exists in `%LocalAppData%\lgtv-display-sync\`, that file is still preferred on load
+for interactive upgrades. ColorControl keys are migrated into ProgramData when neither store has a
+key yet.
+
+## Windows service (autostart)
+
+Official install uses PowerShell scripts that are **copied into the build output** next to the
+exe (elevated). This is **not** the experimental `probe/ctx` session‑0 helpers.
+
+Prerequisites:
+
+1. Build the app and ensure `config.json` sits beside `lgtv-display-sync.exe` in the output folder.
+2. Pair once interactively if you do not already have a client key (`--pair`, or let a normal run
+   migrate from ColorControl / LocalAppData). The install script copies a LocalAppData key into
+   ProgramData when needed so LocalSystem can read it.
+
+```powershell
+# Build (Debug or Release — either works; scripts resolve the sibling exe)
+dotnet build app -c Release
+
+# From an elevated PowerShell prompt, run the scripts in the output folder:
+cd app\bin\Release\net9.0-windows   # or your chosen configuration's output
+.\install-service.ps1
+.\uninstall-service.ps1
+```
+
+`install-service.ps1` registers whatever `lgtv-display-sync.exe` sits next to the script (override
+with `-ExePath` only if you intentionally point elsewhere).
+
+| | |
+|---|---|
+| SCM name | `lgtv-display-sync` |
+| Display name | LG TV Power Resume Sync Utility (nsoto.dev) |
+| Account / start | LocalSystem / Automatic |
+| Logs | `%ProgramData%\nsoto.dev\lg-tv-display-sync\log.txt` |
+
+A self‑contained publish layout (single folder you can XCopy) is still a roadmap **P1** chore.
 
 ## Status
 
-Working **prototype**, validated end‑to‑end with the VPN connected (user session). Intended as an
-**interim** daily driver until ColorControl handles this VPN + TLS‑stall case again.
+Working **prototype**, validated end‑to‑end with the VPN connected. Intended as an **interim**
+daily driver until ColorControl handles this VPN + TLS‑stall case again.
 
-**Session 0 / SYSTEM:** a process in session 0 **does** receive `GUID_CONSOLE_DISPLAY_STATE`
-OFF→ON transitions and can run the full SSAP + WoL path (`power-off: sent` / `screen-on: sent OK`
-observed under SYSTEM). `--watch-only` logs events without touching the TV.
+**Dual‑mode host + service install:** non‑interactive SCM start → Windows service; direct launch →
+console. Official autostart: `install-service.ps1` in the build output (source:
+[`app/install-service.ps1`](app/install-service.ps1)).
 
-**Next (docs):** Windows service host (keep console when launched directly), official service
-install/autostart, and a system tray icon when interactive — see [`docs/roadmap.md`](docs/roadmap.md)
-and [`docs/features/service-and-tray.md`](docs/features/service-and-tray.md).
+**Next:** system tray when interactive — see [`docs/roadmap.md`](docs/roadmap.md) and
+[`docs/features/service-and-tray.md`](docs/features/service-and-tray.md).
 
 ## Repo layout
 
 ```
-app/     the utility
-probe/   instrumented SSAP connect probe used to diagnose the VPN stall
-docs/    product roadmap, MVP bar, feature notes
+app/       the utility (+ install/uninstall scripts, copied to bin on build)
+probe/     instrumented SSAP connect probe used to diagnose the VPN stall
+docs/      product roadmap, MVP bar, feature notes
 ```
