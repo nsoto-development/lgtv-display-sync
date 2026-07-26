@@ -1,0 +1,7 @@
+{
+  "Ip": "192.168.1.50",
+  "Port": 3001,
+  "Mac": "AA:BB:CC:DD:EE:FF",
+  "OffAction": "power",
+  "KeyFile": null
+}
