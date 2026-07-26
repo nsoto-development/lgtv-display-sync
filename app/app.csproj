@@ -5,7 +5,6 @@
     <TargetFramework>net9.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>lgtv-display-sync</AssemblyName>
     <RootNamespace>LgtvDisplaySync.App</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>

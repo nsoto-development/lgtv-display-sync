@@ -1,5 +1,5 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
-using System.Windows.Forms;
 
 namespace LgtvDisplaySync.App;
 
@@ -82,14 +82,47 @@ internal static class Program
             Log($"FAILED to register monitor watcher (expected if running as a session-0 service): {ex.GetType().Name}: {ex.Message}");
         }
 
-        Console.CancelKeyPress += (_, e) => { e.Cancel = true; Application.Exit(); };
-        Application.Run(); // message pump for the watcher
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; PostQuitMessage(0); };
+        RunMessageLoop(); // message pump for the watcher
 
         _current?.Cancel();
         watcher?.Dispose();
         _tv?.Dispose();
         Log("stopped.");
         return 0;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MSG
+    {
+        public IntPtr hwnd;
+        public uint message;
+        public IntPtr wParam;
+        public IntPtr lParam;
+        public uint time;
+        public int pt_x;
+        public int pt_y;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern int GetMessage(out MSG lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax);
+
+    [DllImport("user32.dll")]
+    private static extern bool TranslateMessage(ref MSG lpMsg);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr DispatchMessage(ref MSG lpMsg);
+
+    [DllImport("user32.dll")]
+    private static extern void PostQuitMessage(int nExitCode);
+
+    private static void RunMessageLoop()
+    {
+        while (GetMessage(out var msg, IntPtr.Zero, 0, 0) > 0)
+        {
+            TranslateMessage(ref msg);
+            DispatchMessage(ref msg);
+        }
     }
 
     private static string GetSessionInfo()
