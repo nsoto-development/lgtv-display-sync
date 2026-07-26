@@ -12,7 +12,7 @@ namespace LgtvDisplaySync.App;
 // Minimal LG webOS SSAP client over wss://ip:3001.
 // Phased connect (TCP -> TLS -> WS upgrade -> register) with a short per-attempt
 // timeout, so a stalled TLS handshake (see README) is abandoned quickly and retried,
-// instead of blocking for 5s+ like ColorControl. One warm connection is kept; callers
+// instead of blocking for 5s+ like ColorControl's connect path. One warm connection is kept; callers
 // reconnect via EnsureConnectedAsync with a retry budget.
 public sealed class SsapClient(string ip, int port, KeyStore keys) : IDisposable
 {
