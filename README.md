@@ -99,16 +99,21 @@ its key is reused automatically once.
 
 ## Status
 
-Working **prototype**, validated end‑to‑end with the VPN connected (user session). Not yet
-packaged for autostart.
+Working **prototype**, validated end‑to‑end with the VPN connected (user session). Intended as an
+**interim** daily driver until ColorControl handles this VPN + TLS‑stall case again.
 
 **Session 0 / SYSTEM:** a process in session 0 **does** receive `GUID_CONSOLE_DISPLAY_STATE`
 OFF→ON transitions and can run the full SSAP + WoL path (`power-off: sent` / `screen-on: sent OK`
 observed under SYSTEM). `--watch-only` logs events without touching the TV.
+
+**Next (docs):** Windows service host (keep console when launched directly), official service
+install/autostart, and a system tray icon when interactive — see [`docs/roadmap.md`](docs/roadmap.md)
+and [`docs/features/service-and-tray.md`](docs/features/service-and-tray.md).
 
 ## Repo layout
 
 ```
 app/     the utility
 probe/   instrumented SSAP connect probe used to diagnose the VPN stall
+docs/    product roadmap, MVP bar, feature notes
 ```
