@@ -10,3 +10,14 @@ config.json
 # diagnostic & packet-capture artifacts from the investigation
 probe/ctx/
 *.pcapng
+
+# Local Cursor / NUDL tooling (kept on this machine only; not part of the public project)
+.cursor/
+.cursorignore
+AGENTS.md
+
+# NUDL process scaffolding (product docs under docs/ stay tracked)
+docs/how-to-use.md
+docs/process/
+docs/features/_template.md
+docs/epics/
