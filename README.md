@@ -14,14 +14,14 @@ It runs as an ordinary **user‑session app** (no Windows service, no elevation)
 
 This started as a prototype to fix a real, specific setup:
 
-- An **LG G5** is the machine's **only display**, driven over a **dedicated, isolated Ethernet
-  segment** (`192.168.100.0/24`) — separate from the PC's internet connection (Wi‑Fi). A near
-  air‑gapped topology: the TV link carries no internet, just PC↔TV control.
+- An **LG OLED** is the machine's **only display**, driven over a **dedicated, isolated Ethernet
+  segment** (its own `/24`, no internet) — separate from the PC's internet connection (Wi‑Fi).
+  A near air‑gapped topology: the TV link carries just PC↔TV control.
 - [ColorControl](https://github.com/Maassoft/ColorControl) handled "display sleeps → TV off,
   wake → TV on" and worked fine.
-- After **ProtonVPN** (WireGuard) was installed, **waking the TV stopped working**: lock the PC,
-  the display sleeps, move the mouse — and the TV screen never comes back. **Only with the VPN
-  connected.** VPN off always worked, on any IP scheme.
+- After a **VPN** was connected, **waking the TV stopped working**: lock the PC, the display
+  sleeps, move the mouse — and the TV screen never comes back. **Only with the VPN connected.**
+  VPN off always worked, on any IP scheme.
 
 The tell‑tale detail: the machine could still `ping` and open a TCP socket to the TV with the VPN
 on, so it *looked* reachable — but the control session never established, so no "screen on" was
@@ -90,7 +90,7 @@ its key is reused automatically once.
 
 ## Status
 
-Working **prototype**, validated end‑to‑end under ProtonVPN. Not yet packaged for autostart.
+Working **prototype**, validated end‑to‑end with the VPN connected. Not yet packaged for autostart.
 
 Known open question: whether an equivalent **session‑0 Windows service** receives display
 **transition** events (SSAP + WoL and the initial registration event do work from SYSTEM/session 0;

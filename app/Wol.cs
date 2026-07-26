@@ -5,7 +5,7 @@ using System.Net.Sockets;
 namespace LgtvDisplaySync.App;
 
 // Wake-on-LAN. Sends the magic packet to the subnet-directed broadcast of the local NIC
-// whose subnet contains the TV (e.g. 192.168.100.255), sourced from that NIC — not the
+// whose subnet contains the TV (e.g. 192.168.1.255), sourced from that NIC — not the
 // all-NICs / network-address broadcast, which is what leaks WoL out the VPN adapter.
 internal static class Wol
 {

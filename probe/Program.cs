@@ -73,9 +73,10 @@ internal static class Program
 
     private static async Task<int> Main(string[] args)
     {
-        var ip = "192.168.100.2";
+        // Placeholders — pass --ip / --bind for your lab (do not commit real TV addresses).
+        var ip = "192.168.1.100";
         var port = 3001;
-        string? bindIp = "192.168.100.1"; // Ethernet NIC toward the TV; --no-bind to let the OS choose
+        string? bindIp = null; // optional: --bind <local-nic-ip> to force the TV-facing NIC
         var phaseTimeoutMs = 15000;
         string? screenOnce = null; // "off"/"on": send one screen command then exit (non-interactive)
         var connectOnly = false;   // connect+register, report, exit (no interactive loop)
