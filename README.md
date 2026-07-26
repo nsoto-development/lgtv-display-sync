@@ -87,6 +87,9 @@ app/bin/Debug/net9.0-windows/lgtv-display-sync.exe --pair
 # run it (reacts to display sleep/wake); Ctrl+C to stop
 app/bin/Debug/net9.0-windows/lgtv-display-sync.exe
 
+# tray companion — status / Start / Stop for the installed Windows service (no watcher)
+app/bin/Debug/net9.0-windows/lgtv-display-sync.exe --tray
+
 # log display OFF/ON only (no SSAP/WoL) — useful for session-0 experiments
 app/bin/Debug/net9.0-windows/lgtv-display-sync.exe --watch-only
 ```
@@ -141,12 +144,26 @@ A self‑contained publish layout (single folder you can XCopy) is still a roadm
 Working **prototype**, validated end‑to‑end with the VPN connected. Intended as an **interim**
 daily driver until ColorControl handles this VPN + TLS‑stall case again.
 
-**Dual‑mode host + service install:** non‑interactive SCM start → Windows service; direct launch →
-console. Official autostart: `install-service.ps1` in the build output (source:
-[`app/scripts/install-service.ps1`](app/scripts/install-service.ps1)).
+**How it launches:**
 
-**Next:** system tray when interactive — see [`docs/roadmap.md`](docs/roadmap.md) and
-[`docs/features/service-and-tray.md`](docs/features/service-and-tray.md).
+```mermaid
+flowchart TD
+  launch[Direct launch] --> flag{Has --tray?}
+  flag -->|no| console[Console watcher]
+  flag -->|yes| tray[Tray companion]
+  tray --> status[Query SCM status]
+  tray --> menu[Start Stop Open logs Exit]
+  scm[SCM start] --> service[Headless watcher]
+```
+
+- **SCM / service:** session‑0 headless watcher (official autostart:
+  `install-service.ps1` in the build output; source
+  [`app/scripts/install-service.ps1`](app/scripts/install-service.ps1)).
+- **Direct launch (default):** console watcher (today).
+- **`--tray`:** user‑session companion for service status / Start / Stop / open logs / Exit — see
+  [`docs/features/service-and-tray.md`](docs/features/service-and-tray.md).
+
+**Next:** P1 chores (ops notes, self‑contained publish) — [`docs/roadmap.md`](docs/roadmap.md).
 
 ## Repo layout
 

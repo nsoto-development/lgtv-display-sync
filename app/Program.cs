@@ -25,7 +25,15 @@ internal static class Program
             if (args[i] == "--keyfile" && i + 1 < args.Length) keyOverride = args[i + 1];
 
         var asService = WindowsServiceHelpers.IsWindowsService();
-        Log($"lgtv-display-sync starting — TV {_cfg.Ip}:{_cfg.Port} mac={_cfg.Mac} off={_cfg.OffAction} session={GetSessionInfo()} host={(asService ? "service" : "console")}{(_watchOnly ? " mode=watch-only" : "")}");
+        var tray = !asService && Array.Exists(args, a => a == "--tray");
+        Log($"lgtv-display-sync starting — TV {_cfg.Ip}:{_cfg.Port} mac={_cfg.Mac} off={_cfg.OffAction} session={GetSessionInfo()} host={(asService ? "service" : tray ? "tray" : "console")}{(_watchOnly ? " mode=watch-only" : "")}");
+
+        // User-session companion for the installed service (no watcher / SSAP in this process).
+        if (tray)
+        {
+            FreeConsole();
+            return TrayCompanion.Run();
+        }
 
         if (_watchOnly)
             return RunHostedOrConsole(asService);
@@ -151,6 +159,9 @@ internal static class Program
 
     [DllImport("user32.dll")]
     internal static extern void PostQuitMessage(int nExitCode);
+
+    [DllImport("kernel32.dll")]
+    private static extern bool FreeConsole();
 
     private static void RunMessageLoop()
     {
