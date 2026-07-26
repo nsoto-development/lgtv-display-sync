@@ -40,13 +40,22 @@ Tracks **[feature] work item #1 (P0)** on [`docs/roadmap.md`](../roadmap.md).
 | SSAP / WoL / keys | `app/Ssap.cs`, `app/Wol.cs`, `app/KeyStore.cs` |
 | Icon | `app/appicon.ico` |
 | Project (Win32 message loop; Hosting Windows Services) | `app/app.csproj` |
+| Service install / uninstall | `app/scripts/install-service.ps1`, `app/scripts/uninstall-service.ps1` (copied to build output root) |
 
 ## Data directory
 
 - **Default (interactive + service):** `%ProgramData%\nsoto.dev\lg-tv-display-sync` (keys + `log.txt`).
 - **Load override:** `--keyfile` / config `KeyFile`, else existing `%LocalAppData%\lgtv-display-sync\{ip}_ClientKey.txt`, else ProgramData; ColorControl migrate still applies when none found.
 - **Save:** explicit path if set, otherwise ProgramData (shared store going forward).
-- **Service account:** assume LocalSystem for session-0 (M3 sets this at install). Ensure ProgramData ACLs allow SYSTEM to read keys written interactively (M3 may harden).
+- **Service account:** LocalSystem (set by `install-service.ps1` in the build output). Install creates the ProgramData dir, grants SYSTEM modify, and copies a legacy LocalAppData key into ProgramData when missing. The script resolves `lgtv-display-sync.exe` as a sibling of itself (no hardcoded configuration path).
+
+## Service identity (M3)
+
+| Field | Value |
+|-------|--------|
+| SCM name | `lgtv-display-sync` (matches `AddWindowsService` in `Program.cs`) |
+| Display name | `LG TV Power Resume Sync Utility (nsoto.dev)` |
+| Description | Watches Windows display on/off and syncs an LG webOS TV (Wake-on-LAN + SSAP). Runs in session 0 so resume still works when no user is logged on. |
 
 ## Milestones
 
@@ -56,7 +65,7 @@ Execution order is the table order (drop WinForms before service/tray work).
 |---|-----------|--------|--------------|
 | M1 | Drop WinForms | Done | Replace `NativeWindow` / `Application.Run` with Win32 HWND message loop; remove `UseWindowsForms`; record WinUI unpackaged as later UI direction |
 | M2 | Dual-mode Windows service host | Done | Non-interactive → true service (`UseWindowsService` + hosted Win32 pump); direct launch → console; ProgramData data dir with local key override |
-| M3 | Official service install / autostart | Planned | Documented install/uninstall (script or CLI); service starts on boot; README updated |
+| M3 | Official service install / autostart | Done | `app/scripts/` install + uninstall copied flat to bin; sibling-exe resolution; LocalSystem auto-start; ProgramData key copy + SYSTEM ACL; README updated |
 | M4 | System tray when interactive | Planned | Tray icon while running interactively; enough UX to confirm “it’s running”; WinUI (unpackaged) for any new UI — not WinForms |
 
 **Quick gate:** each implementation thread names **one milestone** (e.g. “M1 only”), not the whole P0 item.
@@ -70,4 +79,3 @@ Execution order is the table order (drop WinForms before service/tray work).
 ## Open questions
 
 - M4 tray: WinUI `AppWindow` + tray helper vs thin Win32 `NotifyIcon` first and WinUI window later — default toward WinUI if we’re already taking the App SDK dependency for modern UI.
-- M3: ProgramData ACL / copy-key step so LocalSystem can always read a key paired under an interactive user account.

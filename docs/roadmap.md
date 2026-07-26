@@ -10,10 +10,10 @@ Ordered **backlog**: **priority tiers** (P0/P1/P2) group **numbered work items**
 
 ## Status (where we are)
 
-- **Shipped (prototype):** user-session console app that watches `GUID_CONSOLE_DISPLAY_STATE`, drives LG webOS SSAP (short timeout + spaced retries), and wakes the TV via Wake-on-LAN. Validated end-to-end with the VPN connected (true power-off → WoL power-on).
+- **Shipped (prototype):** dual-mode host — Windows service when started by SCM (session 0), console when launched directly; watches `GUID_CONSOLE_DISPLAY_STATE`, drives LG webOS SSAP (short timeout + spaced retries), and wakes the TV via Wake-on-LAN. Validated end-to-end with the VPN connected (true power-off → WoL power-on). Official autostart: [`app/scripts/install-service.ps1`](../app/scripts/install-service.ps1) (copied next to the exe on build).
 - **Proven experimentally:** a process in session 0 / SYSTEM **does** receive display OFF→ON and can run the full SSAP + WoL path; `--watch-only` exists for logging without touching the TV.
-- **Not yet:** true Windows service packaging, official autostart install, or a tray affordance so the user can see it is running.
-- **Current focus:** P0 #1 — service + tray packaging for interim daily use ([`docs/features/service-and-tray.md`](features/service-and-tray.md)).
+- **Not yet:** a tray affordance so the user can see it is running when launched interactively.
+- **Current focus:** P0 #1 — finish service + tray packaging ([`docs/features/service-and-tray.md`](features/service-and-tray.md)); **M4** (tray) remaining.
 - **Pre-launch / MVP:** see [`mvp-scope.md`](mvp-scope.md).
 
 ---
