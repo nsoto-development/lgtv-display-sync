@@ -1,0 +1,12 @@
+# build output
+bin/
+obj/
+*.user
+.vs/
+
+# local config holding real network details (TV IP / MAC) — ship config.json.example instead
+config.json
+
+# diagnostic & packet-capture artifacts from the investigation
+probe/ctx/
+*.pcapng
