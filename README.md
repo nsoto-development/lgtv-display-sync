@@ -20,8 +20,8 @@ This started as a prototype to fix a real, specific setup:
 - [ColorControl](https://github.com/Maassoft/ColorControl) handled "display sleeps → TV off,
   wake → TV on" and worked fine.
 - After a **VPN** was connected, **waking the TV stopped working**: lock the PC, the display
-  sleeps, move the mouse — and the TV screen never comes back. **Only with the VPN connected.**
-  VPN off always worked, on any IP scheme.
+  sleeps, move the mouse — and the TV screen never comes back. The failure was **reproduced
+  only with the VPN connected**; with the VPN off it always worked, on any IP scheme.
 
 The tell‑tale detail: the machine could still `ping` and open a TCP socket to the TV with the VPN
 on, so it *looked* reachable — but the control session never established, so no "screen on" was
@@ -39,15 +39,17 @@ times each connect phase separately, the failure was localized precisely:
 - It's **intermittent and clustered** — long stretches connect in ~130 ms, then a "bad period"
   produces a run of stalls. It's aggravated by **connection churn** (each stalled socket lingers on
   the TV for ~15 s, and webOS has a small connection budget).
-- It is **not** the IP scheme, **not** LAN‑vs‑tunnel routing (the control channel stays on Ethernet
-  with the correct source), and **not** simply source‑binding — a minimal fresh connect reproduces
-  and clears it.
+- Under the conditions we tested, it was **not** explained by the IP scheme, **not** by
+  LAN‑vs‑tunnel routing (the control channel stayed on Ethernet with the correct source),
+  and **not** simply by source‑binding — a minimal fresh connect still reproduced the stall
+  and cleared when the wave passed.
 
-**Why ColorControl fails and this doesn't:** ColorControl uses a **5‑second connect timeout with a
-burst of retries** at the wake moment, which stalls and storms right through a bad period. This tool
-instead does a **fresh connect with a short (~2.5 s) timeout and gentle, spaced retries** — riding
-over the stall waves — and keeps at most one warm connection. Validated end‑to‑end with the VPN
-connected: real display sleep/wake driving **true power‑off → WoL power‑on** on its own.
+**Why ColorControl's connect strategy struggles here:** ColorControl uses a **5‑second connect
+timeout with a burst of retries** at the wake moment, which stalls and storms right through a
+bad period. This tool instead does a **fresh connect with a short (~2.5 s) timeout and gentle,
+spaced retries** — riding over the stall waves — and keeps at most one warm connection.
+Validated end‑to‑end with the VPN connected: real display sleep/wake driving **true power‑off →
+WoL power‑on** on its own.
 
 ## How it works
 
@@ -61,6 +63,10 @@ connected: real display sleep/wake driving **true power‑off → WoL power‑on
 
 webOS SSAP used: register/pairing handshake, `.../power/turnOffScreen` · `turnOnScreen`,
 `system/turnOff` (standby), plus WoL for power‑on.
+
+This is **not a ColorControl fork** — it is a small rewrite that uses standard webOS SSAP and the
+common legacy register handshake. The SSAP transport (phased connect) and retry policy are
+original; pairing keys can be migrated from ColorControl for convenience.
 
 ## Usage
 
