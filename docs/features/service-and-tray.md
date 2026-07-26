@@ -40,7 +40,7 @@ Tracks **[feature] work item #1 (P0)** on [`docs/roadmap.md`](../roadmap.md).
 | SSAP / WoL / keys | `app/Ssap.cs`, `app/Wol.cs`, `app/KeyStore.cs` |
 | Icon | `app/appicon.ico` |
 | Project (Win32 message loop; Hosting Windows Services) | `app/app.csproj` |
-| Service install / uninstall | `app/install-service.ps1`, `app/uninstall-service.ps1` (copied to build output) |
+| Service install / uninstall | `app/scripts/install-service.ps1`, `app/scripts/uninstall-service.ps1` (copied to build output root) |
 
 ## Data directory
 
@@ -65,7 +65,7 @@ Execution order is the table order (drop WinForms before service/tray work).
 |---|-----------|--------|--------------|
 | M1 | Drop WinForms | Done | Replace `NativeWindow` / `Application.Run` with Win32 HWND message loop; remove `UseWindowsForms`; record WinUI unpackaged as later UI direction |
 | M2 | Dual-mode Windows service host | Done | Non-interactive → true service (`UseWindowsService` + hosted Win32 pump); direct launch → console; ProgramData data dir with local key override |
-| M3 | Official service install / autostart | Done | `app/install-service.ps1` + `uninstall-service.ps1` copied to bin; sibling-exe resolution; LocalSystem auto-start; ProgramData key copy + SYSTEM ACL; README updated |
+| M3 | Official service install / autostart | Done | `app/scripts/` install + uninstall copied flat to bin; sibling-exe resolution; LocalSystem auto-start; ProgramData key copy + SYSTEM ACL; README updated |
 | M4 | System tray when interactive | Planned | Tray icon while running interactively; enough UX to confirm “it’s running”; WinUI (unpackaged) for any new UI — not WinForms |
 
 **Quick gate:** each implementation thread names **one milestone** (e.g. “M1 only”), not the whole P0 item.

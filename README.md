@@ -143,7 +143,7 @@ daily driver until ColorControl handles this VPN + TLS‑stall case again.
 
 **Dual‑mode host + service install:** non‑interactive SCM start → Windows service; direct launch →
 console. Official autostart: `install-service.ps1` in the build output (source:
-[`app/install-service.ps1`](app/install-service.ps1)).
+[`app/scripts/install-service.ps1`](app/scripts/install-service.ps1)).
 
 **Next:** system tray when interactive — see [`docs/roadmap.md`](docs/roadmap.md) and
 [`docs/features/service-and-tray.md`](docs/features/service-and-tray.md).
@@ -151,7 +151,8 @@ console. Official autostart: `install-service.ps1` in the build output (source:
 ## Repo layout
 
 ```
-app/       the utility (+ install/uninstall scripts, copied to bin on build)
-probe/     instrumented SSAP connect probe used to diagnose the VPN stall
-docs/      product roadmap, MVP bar, feature notes
+app/           the utility
+app/scripts/   service install / uninstall (copied next to the exe on build)
+probe/         instrumented SSAP connect probe used to diagnose the VPN stall
+docs/          product roadmap, MVP bar, feature notes
 ```

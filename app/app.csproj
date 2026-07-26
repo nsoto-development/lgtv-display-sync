@@ -13,8 +13,9 @@
 
   <ItemGroup>
     <None Update="config.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('config.json')" />
-    <None Update="install-service.ps1" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="uninstall-service.ps1" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Source under scripts/; flatten to output root next to the exe. -->
+    <None Include="scripts\install-service.ps1" CopyToOutputDirectory="PreserveNewest" Link="install-service.ps1" TargetPath="install-service.ps1" />
+    <None Include="scripts\uninstall-service.ps1" CopyToOutputDirectory="PreserveNewest" Link="uninstall-service.ps1" TargetPath="uninstall-service.ps1" />
   </ItemGroup>
 
   <ItemGroup>
