@@ -85,6 +85,9 @@ app/bin/Debug/net9.0-windows/lgtv-display-sync.exe --pair
 
 # run it (reacts to display sleep/wake); Ctrl+C to stop
 app/bin/Debug/net9.0-windows/lgtv-display-sync.exe
+
+# log display OFF/ON only (no SSAP/WoL) — useful for session-0 experiments
+app/bin/Debug/net9.0-windows/lgtv-display-sync.exe --watch-only
 ```
 
 **Config:** copy `app/config.json.example` → `app/config.json` and set your TV's `Ip`, `Mac`, and
@@ -96,12 +99,12 @@ its key is reused automatically once.
 
 ## Status
 
-Working **prototype**, validated end‑to‑end with the VPN connected. Not yet packaged for autostart.
+Working **prototype**, validated end‑to‑end with the VPN connected (user session). Not yet
+packaged for autostart.
 
-Known open question: whether an equivalent **session‑0 Windows service** receives display
-**transition** events (SSAP + WoL and the initial registration event do work from SYSTEM/session 0;
-real off→on transitions are untested). A cleaned‑up version of these findings may be worth
-contributing back to ColorControl as a fix.
+**Session 0 / SYSTEM:** a process in session 0 **does** receive `GUID_CONSOLE_DISPLAY_STATE`
+OFF→ON transitions and can run the full SSAP + WoL path (`power-off: sent` / `screen-on: sent OK`
+observed under SYSTEM). `--watch-only` logs events without touching the TV.
 
 ## Repo layout
 

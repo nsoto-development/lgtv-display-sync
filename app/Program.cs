@@ -6,19 +6,29 @@ namespace LgtvDisplaySync.App;
 internal static class Program
 {
     private static Config _cfg = new();
-    private static SsapClient _tv = null!;
+    private static SsapClient? _tv;
+    private static SsapClient Tv => _tv ?? throw new InvalidOperationException("SSAP client not initialized");
     private static CancellationTokenSource? _current;
     private static readonly SemaphoreSlim _gate = new(1, 1);
+    private static bool _watchOnly;
 
     [STAThread]
     private static int Main(string[] args)
     {
         _cfg = Config.Load();
+        _watchOnly = Array.Exists(args, a => a == "--watch-only");
         string? keyOverride = null;
         for (var i = 0; i < args.Length; i++)
             if (args[i] == "--keyfile" && i + 1 < args.Length) keyOverride = args[i + 1];
 
-        Log($"lgtv-display-sync starting — TV {_cfg.Ip}:{_cfg.Port} mac={_cfg.Mac} off={_cfg.OffAction} session={GetSessionInfo()}");
+        Log($"lgtv-display-sync starting — TV {_cfg.Ip}:{_cfg.Port} mac={_cfg.Mac} off={_cfg.OffAction} session={GetSessionInfo()}{(_watchOnly ? " mode=watch-only" : "")}");
+
+        if (_watchOnly)
+        {
+            // Log display OFF/ON only — no SSAP / WoL (used for session-0 experiments).
+            return RunWatcherLoop();
+        }
+
         _tv = new SsapClient(_cfg.Ip, _cfg.Port, new KeyStore(_cfg.Ip, keyOverride ?? _cfg.KeyFile));
 
         // First-run pairing: connect once (long wait for the on-screen prompt) and save the key.
@@ -53,12 +63,19 @@ internal static class Program
             }
         }
 
+        return RunWatcherLoop();
+    }
+
+    private static int RunWatcherLoop()
+    {
         MonitorPowerWatcher? watcher = null;
         try
         {
             watcher = new MonitorPowerWatcher();
             watcher.DisplayStateChanged += OnDisplayStateChanged;
-            Log("registered for monitor power events; waiting. (Ctrl+C to quit)");
+            Log(_watchOnly
+                ? "watch-only: registered for monitor power events (no SSAP/WoL). (Ctrl+C to quit)"
+                : "registered for monitor power events; waiting. (Ctrl+C to quit)");
         }
         catch (Exception ex)
         {
@@ -70,7 +87,7 @@ internal static class Program
 
         _current?.Cancel();
         watcher?.Dispose();
-        _tv.Dispose();
+        _tv?.Dispose();
         Log("stopped.");
         return 0;
     }
@@ -88,6 +105,8 @@ internal static class Program
     private static void OnDisplayStateChanged(bool displayOn)
     {
         Log($"display -> {(displayOn ? "ON" : "OFF")}");
+        if (_watchOnly) return;
+
         _current?.Cancel();
         var cts = new CancellationTokenSource();
         _current = cts;
@@ -119,12 +138,12 @@ internal static class Program
     // Display turned off -> tell the TV to turn its screen off. Best-effort, short budget.
     private static async Task<bool> ScreenOffAsync(CancellationToken ct)
     {
-        if (!await _tv.EnsureConnectedAsync(perAttemptMs: 2500, totalBudgetMs: 8000, gapMs: 1000, Log, ct))
+        if (!await Tv.EnsureConnectedAsync(perAttemptMs: 2500, totalBudgetMs: 8000, gapMs: 1000, Log, ct))
         {
             Log("screen-off: could not connect");
             return false;
         }
-        var ok = await _tv.SendScreenAsync(on: false, ct);
+        var ok = await Tv.SendScreenAsync(on: false, ct);
         Log($"screen-off: {(ok ? "sent" : "failed")}");
         return ok;
     }
@@ -139,8 +158,8 @@ internal static class Program
         var deadline = Environment.TickCount64 + 60_000;
         while (!ct.IsCancellationRequested && Environment.TickCount64 < deadline)
         {
-            if (await _tv.EnsureConnectedAsync(perAttemptMs: 2500, totalBudgetMs: 20_000, gapMs: 1500, Log, ct)
-                && await _tv.SendScreenAsync(on: true, ct))
+            if (await Tv.EnsureConnectedAsync(perAttemptMs: 2500, totalBudgetMs: 20_000, gapMs: 1500, Log, ct)
+                && await Tv.SendScreenAsync(on: true, ct))
             {
                 Log("screen-on: sent OK");
                 return true;
@@ -154,12 +173,12 @@ internal static class Program
     // Display off -> put the TV into standby (real power off). Wake is via WoL only.
     private static async Task<bool> PowerOffAsync(CancellationToken ct)
     {
-        if (!await _tv.EnsureConnectedAsync(perAttemptMs: 2500, totalBudgetMs: 8000, gapMs: 1000, Log, ct))
+        if (!await Tv.EnsureConnectedAsync(perAttemptMs: 2500, totalBudgetMs: 8000, gapMs: 1000, Log, ct))
         {
             Log("power-off: could not connect");
             return false;
         }
-        var ok = await _tv.SendPowerOffAsync(ct);
+        var ok = await Tv.SendPowerOffAsync(ct);
         Log($"power-off: {(ok ? "sent" : "failed")}");
         return ok;
     }
@@ -169,7 +188,7 @@ internal static class Program
     {
         Wol.Send(_cfg.Mac, _cfg.Ip, Log);
         Log("power-on: WoL sent; waiting for TV to boot and accept a control connection...");
-        var ok = await _tv.EnsureConnectedAsync(perAttemptMs: 2500, totalBudgetMs: 60_000, gapMs: 2000, Log, ct);
+        var ok = await Tv.EnsureConnectedAsync(perAttemptMs: 2500, totalBudgetMs: 60_000, gapMs: 2000, Log, ct);
         Log($"power-on: {(ok ? "TV connected" : "no connection within 60s")}");
         return ok;
     }
@@ -188,6 +207,7 @@ internal static class Program
     {
         var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}  {msg}";
         Console.WriteLine(line);
+        try { Console.Out.Flush(); } catch { }
         lock (_logLock)
         {
             try { File.AppendAllText(_logPath, line + Environment.NewLine); } catch { }
