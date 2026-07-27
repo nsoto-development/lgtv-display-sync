@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
 using System.ServiceProcess;
 
 namespace LgtvDisplaySync.App;
@@ -10,6 +12,8 @@ namespace LgtvDisplaySync.App;
 internal static class TrayCompanion
 {
     internal const string ServiceName = "lgtv-display-sync";
+    internal const string ElevatedCtlArg = "--elevated-service-ctl";
+    private const int ErrorCancelled = 1223; // ERROR_CANCELLED — UAC declined
 
     private const uint WM_APP = 0x8000;
     private const uint WM_TRAY = WM_APP + 1;
@@ -202,44 +206,114 @@ internal static class TrayCompanion
             WindowProc(hWnd, WM_COMMAND, (IntPtr)cmd, IntPtr.Zero);
     }
 
-    private static void TryStartService()
+    private static void TryStartService() => TryControlService("start");
+
+    private static void TryStopService() => TryControlService("stop");
+
+    /// <summary>
+    /// One-shot entry for the UAC-elevated child launched by the tray. Tray itself stays non-elevated.
+    /// </summary>
+    internal static int RunElevatedControl(string action)
     {
         try
         {
-            using var sc = new ServiceController(ServiceName);
-            if (sc.Status == ServiceControllerStatus.Running) { RefreshStatus(); return; }
-            sc.Start();
-            sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
+            ControlServiceInProcess(NormalizeAction(action));
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            // Child has no UI; parent surfaces failure via exit code. Log to stderr if attached.
+            Console.Error.WriteLine($"elevated-service-ctl {action} failed: {ex.Message}");
+            return 1;
+        }
+    }
+
+    private static void TryControlService(string action)
+    {
+        try
+        {
+            if (IsElevated())
+                ControlServiceInProcess(action);
+            else if (!TryElevateServiceControl(action))
+                return; // UAC cancelled — leave status as-is
         }
         catch (Exception ex)
         {
             MessageBox(IntPtr.Zero,
-                "Could not start the service.\n\n" + ex.Message +
-                "\n\nTry running an elevated Command Prompt, or re-run install-service.ps1.",
+                $"Could not {action} the service.\n\n" + ex.Message,
                 "lgtv-display-sync", 0x00000010 /* MB_ICONERROR */);
         }
         RefreshStatus();
         AddOrUpdateNotifyIcon(NIM_MODIFY);
     }
 
-    private static void TryStopService()
+    private static void ControlServiceInProcess(string action)
     {
-        try
+        using var sc = new ServiceController(ServiceName);
+        if (action == "start")
         {
-            using var sc = new ServiceController(ServiceName);
-            if (sc.Status == ServiceControllerStatus.Stopped) { RefreshStatus(); return; }
+            if (sc.Status == ServiceControllerStatus.Running) return;
+            sc.Start();
+            sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
+        }
+        else
+        {
+            if (sc.Status == ServiceControllerStatus.Stopped) return;
             sc.Stop();
             sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
         }
-        catch (Exception ex)
+    }
+
+    /// <summary>
+    /// Returns false if the user cancelled UAC; true if the elevated child finished (success or failure).
+    /// </summary>
+    private static bool TryElevateServiceControl(string action)
+    {
+        var exe = Environment.ProcessPath
+            ?? throw new InvalidOperationException("Could not resolve process path for elevation.");
+
+        try
         {
-            MessageBox(IntPtr.Zero,
-                "Could not stop the service.\n\n" + ex.Message +
-                "\n\nTry running an elevated Command Prompt.",
-                "lgtv-display-sync", 0x00000010 /* MB_ICONERROR */);
+            using var p = Process.Start(new ProcessStartInfo
+            {
+                FileName = exe,
+                Arguments = $"{ElevatedCtlArg} {action}",
+                Verb = "runas",
+                UseShellExecute = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
+            });
+            if (p is null)
+                throw new InvalidOperationException("Failed to start elevated helper.");
+
+            if (!p.WaitForExit(60_000))
+            {
+                try { p.Kill(entireProcessTree: true); } catch { /* best-effort */ }
+                throw new System.TimeoutException("Elevated start/stop did not finish within 60 seconds.");
+            }
+
+            if (p.ExitCode != 0)
+            {
+                MessageBox(IntPtr.Zero,
+                    $"Could not {action} the service (elevated helper exited {p.ExitCode}).",
+                    "lgtv-display-sync", 0x00000010 /* MB_ICONERROR */);
+            }
+            return true;
         }
-        RefreshStatus();
-        AddOrUpdateNotifyIcon(NIM_MODIFY);
+        catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorCancelled)
+        {
+            return false;
+        }
+    }
+
+    private static string NormalizeAction(string action) =>
+        action.Equals("start", StringComparison.OrdinalIgnoreCase) ? "start"
+        : action.Equals("stop", StringComparison.OrdinalIgnoreCase) ? "stop"
+        : throw new ArgumentException($"Unknown service control action '{action}' (expected start|stop).");
+
+    private static bool IsElevated()
+    {
+        using var id = WindowsIdentity.GetCurrent();
+        return new WindowsPrincipal(id).IsInRole(WindowsBuiltInRole.Administrator);
     }
 
     private static void OpenLogFolder()

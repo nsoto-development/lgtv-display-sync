@@ -31,6 +31,7 @@ whether the service is running and can start/stop it.
 ```
 
 6. Optional tray UI (user session): `.\lgtv-display-sync.exe --tray`
+   (Start/Stop may prompt UAC once; the tray itself stays non-elevated.)
 
 Uninstall: `.\uninstall-service.ps1` (leaves ProgramData keys/logs in place).
 
@@ -120,7 +121,8 @@ app/bin/Release/net9.0-windows/lgtv-display-sync.exe --pair
 # run it (reacts to display sleep/wake); Ctrl+C to stop
 app/bin/Release/net9.0-windows/lgtv-display-sync.exe
 
-# tray companion — status / Start / Stop for the installed Windows service (no watcher)
+# tray companion — status / Start / Stop for the installed Windows service (no watcher).
+# Start/Stop prompts UAC via a one-shot elevated child; tray stays non-elevated.
 app/bin/Release/net9.0-windows/lgtv-display-sync.exe --tray
 
 # log display OFF/ON only (no SSAP/WoL) — useful for session-0 experiments
