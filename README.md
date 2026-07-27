@@ -100,9 +100,9 @@ loaded from the folder next to the exe (so a service `binPath` must point at a b
 your real `config.json`).
 
 **Pairing / keys:** on first run with no key, the tool shows a prompt on the TV, waits, and saves
-the client‑key under `%ProgramData%\nsoto.dev\lg-tv-display-sync\` (shared by console and service).
+the client‑key under `%ProgramData%\nsoto.dev\lg-tv-display-sync\config\` (shared by console and service).
 If a legacy key exists in `%LocalAppData%\lgtv-display-sync\`, that file is still preferred on load
-for interactive upgrades. ColorControl keys are migrated into ProgramData when neither store has a
+for interactive upgrades. ColorControl keys are migrated into ProgramData `config\` when neither store has a
 key yet.
 
 ## Windows service (autostart)
@@ -135,7 +135,7 @@ with `-ExePath` only if you intentionally point elsewhere).
 | SCM name | `lgtv-display-sync` |
 | Display name | LG TV Power Resume Sync Utility (nsoto.dev) |
 | Account / start | LocalSystem / Automatic |
-| Logs | `%ProgramData%\nsoto.dev\lg-tv-display-sync\log.txt` |
+| Logs | `%ProgramData%\nsoto.dev\lg-tv-display-sync\log\log.txt` |
 
 A self‑contained publish layout (single folder you can XCopy) is still a roadmap **P1** chore.
 

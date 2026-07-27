@@ -3,13 +3,15 @@ namespace LgtvDisplaySync.App;
 // Persists the LG webOS client-key. Resolution order on load:
 //   1. an explicit --keyfile / config path, if given
 //   2. legacy local file (%LocalAppData%\lgtv-display-sync\{ip}_ClientKey.txt) if present
-//   3. shared store (%ProgramData%\nsoto.dev\lg-tv-display-sync\{ip}_ClientKey.txt)
-//   4. one-time migration: reuse a key already paired by ColorControl, and copy it to ProgramData
+//   3. shared store (%ProgramData%\…\config\{ip}_ClientKey.txt)
+//   4. flat ProgramData key (pre-config/ layout) — migrate into config/
+//   5. one-time migration: reuse a key already paired by ColorControl, and copy it to config/
 // If none exist, Load() returns null and the client performs first-run pairing (TV prompt),
-// then calls Save() with the key the TV returns (explicit path if set, else ProgramData).
+// then calls Save() with the key the TV returns (explicit path if set, else config/).
 public sealed class KeyStore(string ip, string? explicitFile)
 {
-    private string ProgramDataPath => Path.Combine(AppPaths.DataDir, $"{ip}_ClientKey.txt");
+    private string ProgramDataPath => AppPaths.ClientKeyPath(ip);
+    private string FlatProgramDataPath => AppPaths.LegacyProgramDataKeyPath(ip);
     private string LegacyPath => Path.Combine(AppPaths.LegacyDataDir, $"{ip}_ClientKey.txt");
 
     private static string ColorControlPath(string ip) => Path.Combine(
@@ -30,11 +32,20 @@ public sealed class KeyStore(string ip, string? explicitFile)
         if (own is not null)
             return own;
 
+        // Pre-config/ layout: key sat next to log.txt under ProgramData root.
+        var flat = Read(FlatProgramDataPath);
+        if (flat is not null)
+        {
+            Save(flat);
+            try { File.Delete(FlatProgramDataPath); } catch { /* leave flat copy if delete fails */ }
+            return flat;
+        }
+
         // One-time reuse of ColorControl's paired key so existing users don't re-pair.
         var cc = Read(ColorControlPath(ip));
         if (cc is not null)
         {
-            Save(cc); // migrate a copy into ProgramData
+            Save(cc); // migrate a copy into ProgramData config/
             return cc;
         }
         return null;

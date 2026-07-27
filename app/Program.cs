@@ -278,7 +278,7 @@ internal static class Program
 
     private static string InitLogPath()
     {
-        try { AppPaths.EnsureDataDir(); } catch { /* best-effort */ }
+        try { AppPaths.EnsureLogDir(); } catch { /* best-effort */ }
         return AppPaths.LogFile;
     }
 
@@ -290,7 +290,7 @@ internal static class Program
         {
             try
             {
-                AppPaths.EnsureDataDir();
+                AppPaths.EnsureLogDir();
                 File.AppendAllText(_logPath, line + Environment.NewLine);
             }
             catch { /* non-fatal */ }

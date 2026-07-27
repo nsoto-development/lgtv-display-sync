@@ -50,10 +50,11 @@ Session 0 isolation: the **service process** cannot own a tray icon. The tray is
 
 ## Data directory
 
-- **Default (interactive + service):** `%ProgramData%\nsoto.dev\lg-tv-display-sync` (keys + `log.txt`).
-- **Load override:** `--keyfile` / config `KeyFile`, else existing `%LocalAppData%\lgtv-display-sync\{ip}_ClientKey.txt`, else ProgramData; ColorControl migrate still applies when none found.
-- **Save:** explicit path if set, otherwise ProgramData (shared store going forward).
-- **Service account:** LocalSystem (set by `install-service.ps1` in the build output). Install creates the ProgramData dir, grants SYSTEM modify, and copies a legacy LocalAppData key into ProgramData when missing. The script resolves `lgtv-display-sync.exe` as a sibling of itself (no hardcoded configuration path).
+- **Default (interactive + service):** `%ProgramData%\nsoto.dev\lg-tv-display-sync\` with `config\` (client keys) and `log\` (`log.txt`).
+- **Load override:** `--keyfile` / config `KeyFile`, else existing `%LocalAppData%\lgtv-display-sync\{ip}_ClientKey.txt`, else `config\{ip}_ClientKey.txt`, else a flat ProgramData key (migrated into `config\`); ColorControl migrate still applies when none found.
+- **Save:** explicit path if set, otherwise `config\` under ProgramData.
+- **Service account:** LocalSystem (set by `install-service.ps1` in the build output). Install creates `config\` + `log\`, grants SYSTEM modify on the tree, and copies a legacy LocalAppData (or flat) key into `config\` when missing. The script resolves `lgtv-display-sync.exe` as a sibling of itself (no hardcoded configuration path).
+- **Tray “Open log folder”:** opens `log\` (not the ProgramData root).
 
 ## Service identity (M3)
 

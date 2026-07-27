@@ -30,4 +30,4 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Removed service '$ServiceName'."
-Write-Host "ProgramData keys/logs were left in place under $(Join-Path $env:ProgramData 'nsoto.dev\lg-tv-display-sync')."
+Write-Host "ProgramData keys/logs were left in place under $(Join-Path $env:ProgramData 'nsoto.dev\lg-tv-display-sync') (config\ and log\)."
