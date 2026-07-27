@@ -6,8 +6,41 @@ TV's power/screen state to the Windows display state, and wakes the TV over the 
 - Windows turns the display **off** (idle / lock / DPMS) → put the **TV to standby** (or just screen‑off).
 - Windows turns the display **on** (mouse / key) → **Wake‑on‑LAN** the TV and turn its screen on.
 
-It can run as a **Windows service** (session 0 / LocalSystem, auto‑start on boot) or as a
-**console app** when you launch the exe directly.
+It can run as a **Windows service** (session 0 / LocalSystem, auto‑start on boot), as a
+**console watcher** when you launch the exe directly, or as a **`--tray` companion** that shows
+whether the service is running and can start/stop it.
+
+**Current release:** [v0.1.0](https://github.com/nsoto-development/lgtv-display-sync/releases/tag/v0.1.0)
+(self‑contained Windows x64 zip). Requires Windows 10/11 x64; no separate .NET install.
+
+---
+
+## Install from a release
+
+1. Download `lgtv-display-sync-0.1.0-win-x64.zip` from
+   [Releases](https://github.com/nsoto-development/lgtv-display-sync/releases).
+2. Extract to a permanent folder (e.g. `C:\Tools\lgtv-display-sync`).
+3. Copy `config.json.example` → `config.json` next to the exe and set your TV `Ip`, `Mac`, and
+   `OffAction` (`"power"` or `"screen"`).
+4. Pair once: `.\lgtv-display-sync.exe --pair` (accept the prompt on the TV), or rely on a
+   ColorControl / LocalAppData key migrate.
+5. Install the service (elevated PowerShell in that folder):
+
+```powershell
+.\install-service.ps1
+```
+
+6. Optional tray UI (user session): `.\lgtv-display-sync.exe --tray`
+
+Uninstall: `.\uninstall-service.ps1` (leaves ProgramData keys/logs in place).
+
+| | |
+|---|---|
+| SCM name | `lgtv-display-sync` |
+| Display name | LG TV Power Resume Sync Utility (nsoto.dev) |
+| Account / start | LocalSystem / Automatic |
+| Keys | `%ProgramData%\nsoto.dev\lg-tv-display-sync\config\` |
+| Logs | `%ProgramData%\nsoto.dev\lg-tv-display-sync\log\log.txt` |
 
 ---
 
@@ -69,27 +102,33 @@ This is **not a ColorControl fork** — it is a small rewrite that uses standard
 common legacy register handshake. The SSAP transport (phased connect) and retry policy are
 original; pairing keys can be migrated from ColorControl for convenience.
 
-## Usage
+## Usage (from source)
 
 ```bash
 # build
-dotnet build app -c Debug
+dotnet build app -c Release
 
 # one‑shot tests (no display cycle needed)
-app/bin/Debug/net9.0-windows/lgtv-display-sync.exe --test on        # WoL + screen on
-app/bin/Debug/net9.0-windows/lgtv-display-sync.exe --test off       # screen off
-app/bin/Debug/net9.0-windows/lgtv-display-sync.exe --test poweroff  # TV -> standby
-app/bin/Debug/net9.0-windows/lgtv-display-sync.exe --test poweron   # WoL + reconnect
+app/bin/Release/net9.0-windows/lgtv-display-sync.exe --test on        # WoL + screen on
+app/bin/Release/net9.0-windows/lgtv-display-sync.exe --test off       # screen off
+app/bin/Release/net9.0-windows/lgtv-display-sync.exe --test poweroff  # TV -> standby
+app/bin/Release/net9.0-windows/lgtv-display-sync.exe --test poweron   # WoL + reconnect
 
 # first‑run pairing (no ColorControl): accept the prompt on the TV
-app/bin/Debug/net9.0-windows/lgtv-display-sync.exe --pair
+app/bin/Release/net9.0-windows/lgtv-display-sync.exe --pair
 
 # run it (reacts to display sleep/wake); Ctrl+C to stop
-app/bin/Debug/net9.0-windows/lgtv-display-sync.exe
+app/bin/Release/net9.0-windows/lgtv-display-sync.exe
+
+# tray companion — status / Start / Stop for the installed Windows service (no watcher)
+app/bin/Release/net9.0-windows/lgtv-display-sync.exe --tray
 
 # log display OFF/ON only (no SSAP/WoL) — useful for session-0 experiments
-app/bin/Debug/net9.0-windows/lgtv-display-sync.exe --watch-only
+app/bin/Release/net9.0-windows/lgtv-display-sync.exe --watch-only
 ```
+
+Framework‑dependent builds need the [.NET 9 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/9.0).
+Release zips are **self‑contained** and do not.
 
 **Config:** copy `app/config.json.example` → `app/config.json` and set your TV's `Ip`, `Mac`, and
 `OffAction` (`"power"` for standby, `"screen"` for panel‑off). `config.json` is git‑ignored and is
@@ -97,9 +136,9 @@ loaded from the folder next to the exe (so a service `binPath` must point at a b
 your real `config.json`).
 
 **Pairing / keys:** on first run with no key, the tool shows a prompt on the TV, waits, and saves
-the client‑key under `%ProgramData%\nsoto.dev\lg-tv-display-sync\` (shared by console and service).
+the client‑key under `%ProgramData%\nsoto.dev\lg-tv-display-sync\config\` (shared by console and service).
 If a legacy key exists in `%LocalAppData%\lgtv-display-sync\`, that file is still preferred on load
-for interactive upgrades. ColorControl keys are migrated into ProgramData when neither store has a
+for interactive upgrades. ColorControl keys are migrated into ProgramData `config\` when neither store has a
 key yet.
 
 ## Windows service (autostart)
@@ -132,21 +171,37 @@ with `-ExePath` only if you intentionally point elsewhere).
 | SCM name | `lgtv-display-sync` |
 | Display name | LG TV Power Resume Sync Utility (nsoto.dev) |
 | Account / start | LocalSystem / Automatic |
-| Logs | `%ProgramData%\nsoto.dev\lg-tv-display-sync\log.txt` |
+| Logs | `%ProgramData%\nsoto.dev\lg-tv-display-sync\log\log.txt` |
 
-A self‑contained publish layout (single folder you can XCopy) is still a roadmap **P1** chore.
+Self‑contained **win‑x64** zips are published on
+[GitHub Releases](https://github.com/nsoto-development/lgtv-display-sync/releases). Building from
+source for a local install folder still works via `dotnet publish` (see below) or `dotnet build`.
 
 ## Status
 
-Working **prototype**, validated end‑to‑end with the VPN connected. Intended as an **interim**
-daily driver until ColorControl handles this VPN + TLS‑stall case again.
+**v0.1.0** — interim daily driver (P0 packaging complete): dual‑mode host, official service
+install, and `--tray` companion. Validated end‑to‑end with the VPN connected.
 
-**Dual‑mode host + service install:** non‑interactive SCM start → Windows service; direct launch →
-console. Official autostart: `install-service.ps1` in the build output (source:
-[`app/scripts/install-service.ps1`](app/scripts/install-service.ps1)).
+**How it launches:**
 
-**Next:** system tray when interactive — see [`docs/roadmap.md`](docs/roadmap.md) and
-[`docs/features/service-and-tray.md`](docs/features/service-and-tray.md).
+```mermaid
+flowchart TD
+  launch[Direct launch] --> flag{Has --tray?}
+  flag -->|no| console[Console watcher]
+  flag -->|yes| tray[Tray companion]
+  tray --> status[Query SCM status]
+  tray --> menu[Start Stop Open logs Exit]
+  scm[SCM start] --> service[Headless watcher]
+```
+
+- **SCM / service:** session‑0 headless watcher (official autostart:
+  `install-service.ps1` in the build output; source
+  [`app/scripts/install-service.ps1`](app/scripts/install-service.ps1)).
+- **Direct launch (default):** console watcher (today).
+- **`--tray`:** user‑session companion for service status / Start / Stop / open logs / Exit — see
+  [`docs/features/service-and-tray.md`](docs/features/service-and-tray.md).
+
+**Next:** P1 chores (ops notes, self‑contained publish) — [`docs/roadmap.md`](docs/roadmap.md).
 
 ## Repo layout
 

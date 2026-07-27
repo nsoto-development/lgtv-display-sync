@@ -1,8 +1,10 @@
 # build output
 bin/
 obj/
+artifacts/
 *.user
 .vs/
+*.zip
 
 # local config holding real network details (TV IP / MAC) — ship config.json.example instead
 config.json

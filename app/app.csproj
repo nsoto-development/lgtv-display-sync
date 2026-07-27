@@ -9,10 +9,15 @@
     <RootNamespace>LgtvDisplaySync.App</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
     <ApplicationIcon>appicon.ico</ApplicationIcon>
+    <Version>0.1.0</Version>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+    <InformationalVersion>0.1.0</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <None Update="config.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('config.json')" />
+    <None Update="appicon.ico" CopyToOutputDirectory="PreserveNewest" />
     <!-- Source under scripts/; flatten to output root next to the exe. -->
     <None Include="scripts\install-service.ps1" CopyToOutputDirectory="PreserveNewest" Link="install-service.ps1" TargetPath="install-service.ps1" />
     <None Include="scripts\uninstall-service.ps1" CopyToOutputDirectory="PreserveNewest" Link="uninstall-service.ps1" TargetPath="uninstall-service.ps1" />
@@ -20,6 +25,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.7" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="9.0.7" />
   </ItemGroup>
 
 </Project>
