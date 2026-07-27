@@ -18,6 +18,10 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        // UAC child from tray Start/Stop — keep non-interactive and skip normal host setup.
+        if (TryHandleElevatedServiceCtl(args, out var elevatedExit))
+            return elevatedExit;
+
         _cfg = Config.Load();
         _watchOnly = Array.Exists(args, a => a == "--watch-only");
         string? keyOverride = null;
@@ -74,6 +78,21 @@ internal static class Program
         }
 
         return RunHostedOrConsole(asService);
+    }
+
+    private static bool TryHandleElevatedServiceCtl(string[] args, out int exitCode)
+    {
+        for (var i = 0; i < args.Length; i++)
+        {
+            if (args[i] == TrayCompanion.ElevatedCtlArg && i + 1 < args.Length)
+            {
+                FreeConsole();
+                exitCode = TrayCompanion.RunElevatedControl(args[i + 1]);
+                return true;
+            }
+        }
+        exitCode = 0;
+        return false;
     }
 
     private static int RunHostedOrConsole(bool asService) =>

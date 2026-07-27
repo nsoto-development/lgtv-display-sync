@@ -12,7 +12,7 @@ Tracks **[feature] work item #1 (P0)** on [`docs/roadmap.md`](../roadmap.md).
 
 - **Dual-mode host:** detect service / non-interactive context and host via the Windows service model (session 0 capable). If the exe is launched directly **without** `--tray`, keep today’s console-app watcher behavior.
 - **Official install / autostart:** a supported command or script (and README section) to create, configure, and start the Windows service — not the experimental `probe/ctx` session-0 helpers.
-- **Tray companion (`--tray`):** same EXE, user session only. Does **not** run the display watcher / SSAP loop. Shows SCM status for `lgtv-display-sync` (**Running** / **Stopped** / **Not installed**), and a minimal menu: **Start**, **Stop**, **Open log folder**, **Exit** (quit tray only; leave service as-is). Hide the console window in this mode. Icon: `appicon.ico`. Stack: thin Win32 `NotifyIcon` (no WinForms; no App SDK in M4).
+- **Tray companion (`--tray`):** same EXE, user session only. Does **not** run the display watcher / SSAP loop. Shows SCM status for `lgtv-display-sync` (**Running** / **Stopped** / **Not installed**), and a minimal menu: **Start**, **Stop**, **Open log folder**, **Exit** (quit tray only; leave service as-is). Hide the console window in this mode. Icon: `appicon.ico`. Stack: thin Win32 `NotifyIcon` (no WinForms; no App SDK in M4). Start/Stop prompts UAC via a one-shot elevated child (`--elevated-service-ctl`); the tray process itself is not elevated.
 - Preserve existing CLI: `--pair`, `--test …`, `--watch-only`, and default console watcher loop.
 
 Session 0 isolation: the **service process** cannot own a tray icon. The tray is always a separate interactive process (`--tray`).
@@ -86,4 +86,4 @@ Execution order is the table order (drop WinForms before service/tray work).
 
 ## Risks (M4)
 
-- Start/Stop via SCM from a non-elevated user may fail (LocalSystem service); v1 surfaces a clear error — no always-on UAC helper.
+- Start/Stop of a LocalSystem service needs admin rights. The tray stays non-elevated; each Start/Stop launches a short elevated child (`--elevated-service-ctl`) so Windows prompts UAC once per action (cancel leaves the service unchanged). No always-on elevated tray / helper.
