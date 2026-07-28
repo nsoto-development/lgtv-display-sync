@@ -45,8 +45,8 @@ Session 0 isolation: the **service process** cannot own a tray icon. The tray is
 | SSAP / WoL / keys | `app/Ssap.cs`, `app/Wol.cs`, `app/KeyStore.cs` |
 | Icon | `app/appicon.ico` |
 | Project (Win32 message loop; Hosting Windows Services) | `app/app.csproj` |
-| Service install / uninstall | `app/scripts/install-service.ps1`, `app/scripts/uninstall-service.ps1` (copied to build output root) |
-| Tray logon startup | `app/scripts/install-tray-startup.ps1`, `app/scripts/uninstall-tray-startup.ps1` (HKCU Run; no elevation) |
+| Service install / uninstall | `app/scripts/install-service.ps1` + `.cmd`, `uninstall-service.ps1` + `.cmd` (copied to build output root; `.cmd` uses `-ExecutionPolicy Bypass` and self-elevates) |
+| Tray logon startup | `app/scripts/install-tray-startup.ps1` + `.cmd`, `uninstall-tray-startup.ps1` + `.cmd` (HKCU Run; no elevation; `.cmd` bypasses MOTW/`RemoteSigned`) |
 
 ## Data directory
 
