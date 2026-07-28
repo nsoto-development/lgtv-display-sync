@@ -1,6 +1,7 @@
 <#
 .SYNOPSIS
-  Registers the --tray companion to start at user logon (current-user Run key).
+  Registers the --tray companion to start at user logon (current-user Run key)
+  and launches the tray icon in this session.
 
   Does not require elevation. Intended to run from the build/publish output folder
   (copied next to the exe). Resolves the exe as a sibling of this script unless
@@ -10,8 +11,8 @@
   Optional absolute path to lgtv-display-sync.exe. Defaults to
   <this-script-directory>\lgtv-display-sync.exe.
 
-.PARAMETER StartNow
-  Also launch the tray companion in this session after registering.
+.PARAMETER NoStart
+  Register logon startup only; do not launch the tray in this session.
 #>
 [CmdletBinding()]
 param(
@@ -19,7 +20,7 @@ param(
     [string] $ExePath,
 
     [Parameter()]
-    [switch] $StartNow
+    [switch] $NoStart
 )
 
 $ErrorActionPreference = 'Stop'
@@ -56,9 +57,20 @@ if ($legacy) {
 
 Write-Host "Registered tray logon startup (HKCU Run '$RunValueName'):"
 Write-Host "  $command"
-Write-Host "Remove with uninstall-tray-startup.ps1. The Windows service is separate (install-service.ps1)."
+Write-Host "Remove with uninstall-tray-startup.cmd (or .ps1). The Windows service is separate (install-service.cmd)."
 
-if ($StartNow) {
-    Start-Process -FilePath $ExePath -ArgumentList '--tray'
-    Write-Host "Started tray companion in this session."
+if ($NoStart) {
+    Write-Host "Skipped launching tray (-NoStart)."
+    return
 }
+
+$trayAlreadyRunning = Get-CimInstance Win32_Process -Filter "Name = 'lgtv-display-sync.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -and ($_.CommandLine -match '(^|\s)--tray(\s|$)') }
+
+if ($trayAlreadyRunning) {
+    Write-Host "Tray companion is already running; left existing icon as-is."
+    return
+}
+
+Start-Process -FilePath $ExePath -ArgumentList '--tray'
+Write-Host "Started tray companion in this session."

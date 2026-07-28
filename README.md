@@ -36,9 +36,12 @@ install-service.cmd
 
 ```text
 install-tray-startup.cmd
-install-tray-startup.cmd -StartNow
+install-tray-startup.cmd -NoStart
 uninstall-tray-startup.cmd
 ```
+
+`install-tray-startup.cmd` registers logon startup **and** launches the tray icon now
+(unless `-NoStart`).
 
 Uninstall service: `uninstall-service.cmd` (leaves ProgramData keys/logs in place).
 Uninstall tray startup: `uninstall-tray-startup.cmd` (does not stop a running tray).
@@ -186,12 +189,13 @@ Optional tray at logon (current user — **no** elevation):
 
 ```text
 install-tray-startup.cmd
-install-tray-startup.cmd -StartNow
+install-tray-startup.cmd -NoStart
 uninstall-tray-startup.cmd
 ```
 
-This writes HKCU `Run` value `LG TV Display Power Sync` → `"…\lgtv-display-sync.exe" --tray`. It does
-not install or control the Windows service.
+This writes HKCU `Run` value `LG TV Display Power Sync` → `"…\lgtv-display-sync.exe" --tray`, and
+starts the tray icon in the current session (use `-NoStart` to register only). It does not install
+or control the Windows service.
 
 | | |
 |---|---|
