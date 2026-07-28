@@ -6,13 +6,14 @@ Make `lgtv-display-sync` usable as an **interim daily driver** until ColorContro
 
 ## Roadmap
 
-Tracks **[feature] work item #1 (P0)** on [`docs/roadmap.md`](../roadmap.md).
+Tracks **[feature] work item #1 (P0)** on [`docs/roadmap.md`](../roadmap.md) (M1–M4). Tray logon startup is **M5** / roadmap **P2 #1**.
 
 ## v1 scope (agreed)
 
 - **Dual-mode host:** detect service / non-interactive context and host via the Windows service model (session 0 capable). If the exe is launched directly **without** `--tray`, keep today’s console-app watcher behavior.
 - **Official install / autostart:** a supported command or script (and README section) to create, configure, and start the Windows service — not the experimental `probe/ctx` session-0 helpers.
 - **Tray companion (`--tray`):** same EXE, user session only. Does **not** run the display watcher / SSAP loop. Shows SCM status for `lgtv-display-sync` (**Running** / **Stopped** / **Not installed**), and a minimal menu: **Start**, **Stop**, **Open log folder**, **Exit** (quit tray only; leave service as-is). Hide the console window in this mode. Icon: `appicon.ico`. Stack: thin Win32 `NotifyIcon` (no WinForms; no App SDK in M4). Start/Stop prompts UAC via a one-shot elevated child (`--elevated-service-ctl`); the tray process itself is not elevated.
+- **Tray logon startup (M5):** optional `install-tray-startup.ps1` / `uninstall-tray-startup.ps1` register or remove a current-user HKCU Run value so `"…\lgtv-display-sync.exe" --tray` starts at logon (no elevation; service install remains separate).
 - Preserve existing CLI: `--pair`, `--test …`, `--watch-only`, and default console watcher loop.
 
 Session 0 isolation: the **service process** cannot own a tray icon. The tray is always a separate interactive process (`--tray`).
@@ -24,12 +25,10 @@ Session 0 isolation: the **service process** cannot own a tray icon. The tray is
 - Changing SSAP / WoL retry policy (already validated).
 - Tray UI inside the session-0 service process (impossible under Session 0 isolation).
 - Running a second watcher from `--tray` (companion only).
-- Autostart registration for the tray companion (Run key / Startup) — launch `…exe --tray` manually for v1.
 - Microsoft Store packaging (WinUI unpackaged / normal EXE is fine when a real window is needed later).
 
 ## Future hooks
 
-- Tray login autostart (Run key / Startup) if interim use lasts.
 - Richer tray actions (force on/off) and a small modern status/settings surface (WinUI unpackaged).
 - Self-contained publish + single-folder install layout (roadmap P1).
 - Retire or slim this feature if ColorControl absorbs the connect strategy.
@@ -47,6 +46,7 @@ Session 0 isolation: the **service process** cannot own a tray icon. The tray is
 | Icon | `app/appicon.ico` |
 | Project (Win32 message loop; Hosting Windows Services) | `app/app.csproj` |
 | Service install / uninstall | `app/scripts/install-service.ps1`, `app/scripts/uninstall-service.ps1` (copied to build output root) |
+| Tray logon startup | `app/scripts/install-tray-startup.ps1`, `app/scripts/uninstall-tray-startup.ps1` (HKCU Run; no elevation) |
 
 ## Data directory
 
@@ -61,7 +61,7 @@ Session 0 isolation: the **service process** cannot own a tray icon. The tray is
 | Field | Value |
 |-------|--------|
 | SCM name | `lgtv-display-sync` (matches `AddWindowsService` in `Program.cs`) |
-| Display name | `LG TV Power Resume Sync Utility (nsoto.dev)` |
+| Display name | `LG TV Display Power Sync Service` |
 | Description | Watches Windows display on/off and syncs an LG webOS TV (Wake-on-LAN + SSAP). Runs in session 0 so resume still works when no user is logged on. |
 
 ## Milestones
@@ -74,8 +74,9 @@ Execution order is the table order (drop WinForms before service/tray work).
 | M2 | Dual-mode Windows service host | Done | Non-interactive → true service (`UseWindowsService` + hosted Win32 pump); direct launch → console; ProgramData data dir with local key override |
 | M3 | Official service install / autostart | Done | `app/scripts/` install + uninstall copied flat to bin; sibling-exe resolution; LocalSystem auto-start; ProgramData key copy + SYSTEM ACL; README updated |
 | M4 | `--tray` service companion | Done | Flag-gated NotifyIcon companion: SCM status (Running/Stopped/Not installed), Start/Stop, open log folder, Exit; no watcher in tray process; console default unchanged; README note |
+| M5 | Tray login autostart | Done | `install-tray-startup.ps1` / `uninstall-tray-startup.ps1`: HKCU Run value `LG TV Display Power Sync` → `"…\lgtv-display-sync.exe" --tray`; no elevation; optional `-StartNow`; copied to build output; README note |
 
-**Quick gate:** each implementation thread names **one milestone** (e.g. “M4 only”), not the whole P0 item.
+**Quick gate:** each implementation thread names **one milestone** (e.g. “M5 only”), not the whole P0 item.
 
 ## UI stack (agreed direction)
 

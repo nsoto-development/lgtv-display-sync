@@ -19,7 +19,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $ServiceName = 'lgtv-display-sync'
-$DisplayName = 'LG TV Power Resume Sync Utility (nsoto.dev)'
+$DisplayName = 'LG TV Display Power Sync Service'
 $Description = 'Watches Windows display on/off and syncs an LG webOS TV (Wake-on-LAN + SSAP). Runs in session 0 so resume still works when no user is logged on.'
 $DataDir = Join-Path $env:ProgramData 'nsoto.dev\lg-tv-display-sync'
 $ConfigDir = Join-Path $DataDir 'config'

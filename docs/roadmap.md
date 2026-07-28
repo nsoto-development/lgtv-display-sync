@@ -44,7 +44,8 @@ Ordered **backlog**: **priority tiers** (P0/P1/P2) group **numbered work items**
 
 ## P2
 
-1. [feature] Optional richer tray menu (open log folder, force on/off test actions) — only if interim use lasts long enough to need it.
+1. [feature] Tray login autostart script — **Done.** Register `--tray` as a current-user startup item (HKCU Run). SSOT: [`docs/features/service-and-tray.md`](features/service-and-tray.md) (M5).
+2. [feature] Optional richer tray menu (force on/off test actions) — only if interim use lasts long enough to need it.
 
 ---
 
