@@ -72,5 +72,17 @@ if ($trayAlreadyRunning) {
     return
 }
 
-Start-Process -FilePath $ExePath -ArgumentList '--tray'
-Write-Host "Started tray companion in this session."
+$exeDir = Split-Path -Parent $ExePath
+$proc = Start-Process -FilePath $ExePath -ArgumentList '--tray' -WorkingDirectory $exeDir -PassThru
+Start-Sleep -Milliseconds 1500
+if ($proc.HasExited) {
+    throw @"
+Tray companion exited immediately (exit code $($proc.ExitCode)).
+Often this means the install folder is a broken mix of framework-dependent and self-contained files
+(local hostfxr.dll + a runtimeconfig that still requires Microsoft.NETCore.App).
+Republish with: dotnet publish app -c Release -r win-x64 --self-contained true -o `"$exeDir`"
+Or run from a Debug/Release build output that matches how it was built.
+"@
+}
+
+Write-Host "Started tray companion in this session (PID $($proc.Id))."
