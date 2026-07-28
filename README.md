@@ -24,24 +24,32 @@ whether the service is running and can start/stop it.
    `OffAction` (`"power"` or `"screen"`).
 4. Pair once: `.\lgtv-display-sync.exe --pair` (accept the prompt on the TV), or rely on a
    ColorControl / LocalAppData key migrate.
-5. Install the service (elevated PowerShell in that folder):
+5. Install the service (double‑click or run from that folder; UAC prompt expected):
 
-```powershell
-.\install-service.ps1
+```text
+install-service.cmd
 ```
 
 6. Optional tray UI (user session): `.\lgtv-display-sync.exe --tray`
    (Start/Stop may prompt UAC once; the tray itself stays non-elevated.)
 7. Optional tray at logon (current user, no elevation):
 
-```powershell
-.\install-tray-startup.ps1          # register HKCU Run
-.\install-tray-startup.ps1 -StartNow  # register and launch now
-.\uninstall-tray-startup.ps1        # remove logon registration
+```text
+install-tray-startup.cmd
+install-tray-startup.cmd -NoStart
+uninstall-tray-startup.cmd
 ```
 
-Uninstall service: `.\uninstall-service.ps1` (leaves ProgramData keys/logs in place).
-Uninstall tray startup: `.\uninstall-tray-startup.ps1` (does not stop a running tray).
+`install-tray-startup.cmd` registers logon startup **and** launches the tray icon now
+(unless `-NoStart`).
+
+Uninstall service: `uninstall-service.cmd` (leaves ProgramData keys/logs in place).
+Uninstall tray startup: `uninstall-tray-startup.cmd` (does not stop a running tray).
+
+The `.cmd` wrappers run the matching `.ps1` with `-ExecutionPolicy Bypass` so a downloaded
+release zip (Mark of the Web / `RemoteSigned`) does not require a code signature. Service
+install/uninstall also self‑elevate via UAC. Prefer the `.cmd` files from a release; the `.ps1`
+files remain for elevated PowerShell sessions if you want them.
 
 | | |
 |---|---|
@@ -163,29 +171,31 @@ Prerequisites:
    migrate from ColorControl / LocalAppData). The install script copies a LocalAppData key into
    ProgramData when needed so LocalSystem can read it.
 
-```powershell
+```text
 # Build (Debug or Release — either works; scripts resolve the sibling exe)
 dotnet build app -c Release
 
-# From an elevated PowerShell prompt, run the scripts in the output folder:
-cd app\bin\Release\net9.0-windows   # or your chosen configuration's output
-.\install-service.ps1
-.\uninstall-service.ps1
+# From the output folder (service install/uninstall will prompt UAC via .cmd):
+cd app\bin\Release\net9.0-windows
+install-service.cmd
+uninstall-service.cmd
 ```
 
-`install-service.ps1` registers whatever `lgtv-display-sync.exe` sits next to the script (override
-with `-ExePath` only if you intentionally point elsewhere).
+`install-service.ps1` / `install-service.cmd` register whatever `lgtv-display-sync.exe` sits next to the
+script (override with `-ExePath` only if you intentionally point elsewhere). Prefer `.cmd` after
+downloading a release zip (avoids unsigned-script / Mark of the Web blocks under `RemoteSigned`).
 
 Optional tray at logon (current user — **no** elevation):
 
-```powershell
-.\install-tray-startup.ps1
-.\install-tray-startup.ps1 -StartNow
-.\uninstall-tray-startup.ps1
+```text
+install-tray-startup.cmd
+install-tray-startup.cmd -NoStart
+uninstall-tray-startup.cmd
 ```
 
-This writes HKCU `Run` value `LG TV Display Power Sync` → `"…\lgtv-display-sync.exe" --tray`. It does
-not install or control the Windows service.
+This writes HKCU `Run` value `LG TV Display Power Sync` → `"…\lgtv-display-sync.exe" --tray`, and
+starts the tray icon in the current session (use `-NoStart` to register only). It does not install
+or control the Windows service.
 
 | | |
 |---|---|
@@ -216,8 +226,8 @@ flowchart TD
 ```
 
 - **SCM / service:** session‑0 headless watcher (official autostart:
-  `install-service.ps1` in the build output; source
-  [`app/scripts/install-service.ps1`](app/scripts/install-service.ps1)).
+  `install-service.cmd` in the build/release output; source
+  [`app/scripts/`](app/scripts/)).
 - **Direct launch (default):** console watcher (today).
 - **`--tray`:** user‑session companion for service status / Start / Stop / open logs / Exit — see
   [`docs/features/service-and-tray.md`](docs/features/service-and-tray.md). Optional logon
@@ -229,7 +239,7 @@ flowchart TD
 
 ```
 app/           the utility
-app/scripts/   service + tray-startup install / uninstall (copied next to the exe on build)
+app/scripts/   service + tray-startup install / uninstall (.ps1 + .cmd; copied next to the exe on build)
 probe/         instrumented SSAP connect probe used to diagnose the VPN stall
 docs/          product roadmap, MVP bar, feature notes
 ```

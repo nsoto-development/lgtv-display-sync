@@ -23,6 +23,10 @@
     <None Include="scripts\uninstall-service.ps1" CopyToOutputDirectory="PreserveNewest" Link="uninstall-service.ps1" TargetPath="uninstall-service.ps1" />
     <None Include="scripts\install-tray-startup.ps1" CopyToOutputDirectory="PreserveNewest" Link="install-tray-startup.ps1" TargetPath="install-tray-startup.ps1" />
     <None Include="scripts\uninstall-tray-startup.ps1" CopyToOutputDirectory="PreserveNewest" Link="uninstall-tray-startup.ps1" TargetPath="uninstall-tray-startup.ps1" />
+    <None Include="scripts\install-service.cmd" CopyToOutputDirectory="PreserveNewest" Link="install-service.cmd" TargetPath="install-service.cmd" />
+    <None Include="scripts\uninstall-service.cmd" CopyToOutputDirectory="PreserveNewest" Link="uninstall-service.cmd" TargetPath="uninstall-service.cmd" />
+    <None Include="scripts\install-tray-startup.cmd" CopyToOutputDirectory="PreserveNewest" Link="install-tray-startup.cmd" TargetPath="install-tray-startup.cmd" />
+    <None Include="scripts\uninstall-tray-startup.cmd" CopyToOutputDirectory="PreserveNewest" Link="uninstall-tray-startup.cmd" TargetPath="uninstall-tray-startup.cmd" />
   </ItemGroup>
 
   <ItemGroup>
