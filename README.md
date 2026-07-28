@@ -32,13 +32,21 @@ whether the service is running and can start/stop it.
 
 6. Optional tray UI (user session): `.\lgtv-display-sync.exe --tray`
    (Start/Stop may prompt UAC once; the tray itself stays non-elevated.)
+7. Optional tray at logon (current user, no elevation):
 
-Uninstall: `.\uninstall-service.ps1` (leaves ProgramData keys/logs in place).
+```powershell
+.\install-tray-startup.ps1          # register HKCU Run
+.\install-tray-startup.ps1 -StartNow  # register and launch now
+.\uninstall-tray-startup.ps1        # remove logon registration
+```
+
+Uninstall service: `.\uninstall-service.ps1` (leaves ProgramData keys/logs in place).
+Uninstall tray startup: `.\uninstall-tray-startup.ps1` (does not stop a running tray).
 
 | | |
 |---|---|
 | SCM name | `lgtv-display-sync` |
-| Display name | LG TV Power Resume Sync Utility (nsoto.dev) |
+| Display name | LG TV Display Power Sync Service |
 | Account / start | LocalSystem / Automatic |
 | Keys | `%ProgramData%\nsoto.dev\lg-tv-display-sync\config\` |
 | Logs | `%ProgramData%\nsoto.dev\lg-tv-display-sync\log\log.txt` |
@@ -168,10 +176,21 @@ cd app\bin\Release\net9.0-windows   # or your chosen configuration's output
 `install-service.ps1` registers whatever `lgtv-display-sync.exe` sits next to the script (override
 with `-ExePath` only if you intentionally point elsewhere).
 
+Optional tray at logon (current user — **no** elevation):
+
+```powershell
+.\install-tray-startup.ps1
+.\install-tray-startup.ps1 -StartNow
+.\uninstall-tray-startup.ps1
+```
+
+This writes HKCU `Run` value `LG TV Display Power Sync` → `"…\lgtv-display-sync.exe" --tray`. It does
+not install or control the Windows service.
+
 | | |
 |---|---|
 | SCM name | `lgtv-display-sync` |
-| Display name | LG TV Power Resume Sync Utility (nsoto.dev) |
+| Display name | LG TV Display Power Sync Service |
 | Account / start | LocalSystem / Automatic |
 | Logs | `%ProgramData%\nsoto.dev\lg-tv-display-sync\log\log.txt` |
 
@@ -201,7 +220,8 @@ flowchart TD
   [`app/scripts/install-service.ps1`](app/scripts/install-service.ps1)).
 - **Direct launch (default):** console watcher (today).
 - **`--tray`:** user‑session companion for service status / Start / Stop / open logs / Exit — see
-  [`docs/features/service-and-tray.md`](docs/features/service-and-tray.md).
+  [`docs/features/service-and-tray.md`](docs/features/service-and-tray.md). Optional logon
+  registration: `install-tray-startup.ps1` (HKCU Run; no elevation).
 
 **Next:** P1 chores (ops notes, self‑contained publish) — [`docs/roadmap.md`](docs/roadmap.md).
 
@@ -209,7 +229,7 @@ flowchart TD
 
 ```
 app/           the utility
-app/scripts/   service install / uninstall (copied next to the exe on build)
+app/scripts/   service + tray-startup install / uninstall (copied next to the exe on build)
 probe/         instrumented SSAP connect probe used to diagnose the VPN stall
 docs/          product roadmap, MVP bar, feature notes
 ```

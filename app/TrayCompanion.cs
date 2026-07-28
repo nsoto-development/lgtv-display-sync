@@ -369,7 +369,7 @@ internal static class TrayCompanion
 
     private static void AddOrUpdateNotifyIcon(uint msg)
     {
-        var tip = "LG TV Display Sync — " + StateLabel(_state);
+        var tip = "LG TV Display Power Sync — " + StateLabel(_state);
         var nid = MakeNotifyIconData(tip);
         if (!Shell_NotifyIcon(msg, ref nid) && msg == NIM_ADD)
             throw new InvalidOperationException($"Shell_NotifyIcon ADD failed (win32 {Marshal.GetLastWin32Error()})");
