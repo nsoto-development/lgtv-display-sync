@@ -10,14 +10,14 @@ It can run as a **Windows service** (session 0 / LocalSystem, auto‑start on bo
 **console watcher** when you launch the exe directly, or as a **`--tray` companion** that shows
 whether the service is running and can start/stop it.
 
-**Current release:** [v0.1.0](https://github.com/nsoto-development/lgtv-display-sync/releases/tag/v0.1.0)
+**Current release:** [v0.2.0](https://github.com/nsoto-development/lgtv-display-sync/releases/tag/v0.2.0)
 (self‑contained Windows x64 zip). Requires Windows 10/11 x64; no separate .NET install.
 
 ---
 
 ## Install from a release
 
-1. Download `lgtv-display-sync-0.1.0-win-x64.zip` from
+1. Download `lgtv-display-sync-0.2.0-win-x64.zip` from
    [Releases](https://github.com/nsoto-development/lgtv-display-sync/releases).
 2. Extract to a permanent folder (e.g. `C:\Tools\lgtv-display-sync`).
 3. Copy `config.json.example` → `config.json` next to the exe and set your TV `Ip`, `Mac`, and
@@ -210,8 +210,8 @@ source for a local install folder still works via `dotnet publish` (see below) o
 
 ## Status
 
-**v0.1.0** — interim daily driver (P0 packaging complete): dual‑mode host, official service
-install, and `--tray` companion. Validated end‑to‑end with the VPN connected.
+**v0.2.0** — tray Start/Stop via on-demand UAC, tray logon startup (with `.cmd` wrappers for
+release zips), plus the v0.1.0 service + tray packaging baseline.
 
 **How it launches:**
 
